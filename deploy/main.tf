@@ -18,7 +18,12 @@ provider "aws" {
       Name        = "Kinetic Workspaces"
       Environment = "All"
       Project     = "Research"
-      Application = "Kinetic"
+      Application = "KineticWorkspaces"
     }
   }
+}
+
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
 }

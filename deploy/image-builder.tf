@@ -1,7 +1,13 @@
-data "aws_key_pair" "nathan" {
-  key_name          = "nathan"
-  include_public_key = true
+resource "tls_private_key" "kinetic_workspaces" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
 }
+
+resource "aws_key_pair" "kinetic_workspaces" {
+  key_name   = "KineticWorkspaces"
+  public_key = tls_private_key.kinetic_workspaces.public_key_openssh
+}
+
 
 data "aws_ami" "kinetic_workspaces" {
   most_recent = true
@@ -14,8 +20,8 @@ data "aws_ami" "kinetic_workspaces" {
 }
 
 data "aws_ami" "kinetic_workspaces_parent_image" {
-  most_recent      = true
-  owners = ["136693071363"]
+  most_recent = true
+  owners      = ["136693071363"]
   filter {
     name   = "name"
     values = ["debian-11-amd64-*"]
@@ -25,7 +31,7 @@ data "aws_ami" "kinetic_workspaces_parent_image" {
     values = ["hvm"]
   }
   filter {
-    name = "architecture"
+    name   = "architecture"
     values = ["x86_64"]
   }
 }
@@ -33,8 +39,8 @@ data "aws_ami" "kinetic_workspaces_parent_image" {
 data "aws_partition" "current" {}
 
 resource "aws_imagebuilder_image_pipeline" "kinetic_workspaces" {
-  name                             = "kinetic_workspaces_image_pipeline"
-  image_recipe_arn                 = aws_imagebuilder_image_recipe.kinetic_workspaces.arn
+  name             = "kinetic_workspaces_image_pipeline"
+  image_recipe_arn = aws_imagebuilder_image_recipe.kinetic_workspaces.arn
 
   infrastructure_configuration_arn = aws_imagebuilder_infrastructure_configuration.kinetic_workspaces.arn
 }
@@ -101,7 +107,7 @@ resource "aws_imagebuilder_component" "kinetic_workspaces" {
 resource "aws_imagebuilder_image" "kinetic_workspaces" {
   image_recipe_arn                 = aws_imagebuilder_image_recipe.kinetic_workspaces.arn
   infrastructure_configuration_arn = aws_imagebuilder_infrastructure_configuration.kinetic_workspaces.arn
-  enhanced_image_metadata_enabled  = false
+  enhanced_image_metadata_enabled  = true
 }
 
 resource "aws_imagebuilder_infrastructure_configuration" "kinetic_workspaces" {
@@ -109,134 +115,35 @@ resource "aws_imagebuilder_infrastructure_configuration" "kinetic_workspaces" {
   description                   = "AWS image builder config for EC2 with Kinetic_Workspaces hosted"
   instance_profile_name         = aws_iam_instance_profile.ec2_kinetic_workspaces.name
   instance_types                = ["t3.micro"]
-  security_group_ids            = [aws_security_group.ec2_kinetic_workspaces_builder.id]
-  subnet_id                     = aws_subnet.kinetic_workspaces_builder.id
+  security_group_ids            = [aws_security_group.ec2_kinetic_workspaces.id]
+  subnet_id                     = aws_subnet.kinetic_workspaces.id
   terminate_instance_on_failure = true
 
 }
 
-resource "aws_route_table_association" "kinetic_workspaces_builder" {
-  subnet_id      = aws_subnet.kinetic_workspaces_builder.id
-  route_table_id = aws_route_table.kinetic_workspaces_builder.id
+resource "aws_route_table_association" "kinetic_workspaces" {
+  subnet_id      = aws_subnet.kinetic_workspaces.id
+  route_table_id = aws_route_table.kinetic_workspaces.id
 }
 
-resource "aws_instance" "kinetic_workspaces_builder" {
+resource "aws_instance" "kinetic_workspaces" {
   ami                  = data.aws_ami.kinetic_workspaces.id
   instance_type        = "t3.micro"
-  key_name             = data.aws_key_pair.nathan.key_name
+  key_name             = aws_key_pair.kinetic_workspaces.key_name
   iam_instance_profile = aws_iam_instance_profile.ec2_kinetic_workspaces.name
-  security_groups      = [aws_security_group.ec2_kinetic_workspaces_builder.id]
-  subnet_id            = aws_subnet.kinetic_workspaces_builder.id
+
+  subnet_id              = aws_subnet.kinetic_workspaces.id
+  vpc_security_group_ids = [aws_security_group.ec2_kinetic_workspaces.id]
 }
 
-resource "aws_security_group" "ec2_kinetic_workspaces_builder" {
-  description = "Controls access to EC2 Image Builder with Kinetic_Workspaces"
 
-  vpc_id = aws_vpc.kinetic_workspaces_builder.id
-  name   = "ec2-image-builder-sg"
 
-  egress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
 
-    cidr_blocks = [
-      "0.0.0.0/0",
-    ]
-  }
-
-  ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-
-    cidr_blocks = [
-      "0.0.0.0/0",
-    ]
-  }
-  ingress {
-    cidr_blocks = [
-      "0.0.0.0/0"
-    ]
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
-  }
+output "workspaces_rstudio_ami_id" {
+  value = data.aws_ami.kinetic_workspaces.id
 }
 
-    # {
-    #   "Effect": "Allow",
-    #   "Action": "s3:ListAllMyBuckets",
-    #   "Resource": "*"
-    # },
-
-resource "aws_iam_role_policy" "ec2_kinetic_workspaces" {
-  name_prefix = "ec2-kinetic_workspaces-role-policy-"
-  role        = aws_iam_role.ec2_kinetic_workspaces.name
-
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:ListBucket",
-        "s3:GetBucketACL",
-        "s3:GetBucketLocation"
-      ],
-      "Resource": "arn:aws:s3:::${aws_s3_bucket.kinetic_workspaces_conf_files.bucket}"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:PutObject",
-        "s3:ListMultipartUploadParts",
-        "s3:AbortMultipartUpload"
-      ],
-      "Resource": "arn:aws:s3:::${aws_s3_bucket.kinetic_workspaces_conf_files.bucket}/*"
-    }
-  ]
-}
-EOF
+output "ssh_key_name" {
+  value = aws_key_pair.kinetic_workspaces.key_name
 }
 
-resource "aws_iam_role" "ec2_kinetic_workspaces" {
-  name_prefix = "ec2-kinetic_workspaces-role-"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": [
-          "ec2.amazonaws.com",
-          "imagebuilder.amazonaws.com"
-        ]
-      },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
-}
-
-resource "aws_iam_instance_profile" "ec2_kinetic_workspaces" {
-  name_prefix = "ec2-kinetic-workspaces-instance-profile-"
-  role        = aws_iam_role.ec2_kinetic_workspaces.name
-}
-
-resource "aws_iam_role_policy_attachment" "role-policy-attachment" {
-  for_each = toset([
-    "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder",
-    "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds",
-    "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  ])
-
-  role       = aws_iam_role.ec2_kinetic_workspaces.name
-  policy_arn = each.value
-}

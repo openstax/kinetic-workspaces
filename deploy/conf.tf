@@ -4,10 +4,6 @@ resource "aws_s3_bucket" "kinetic_workspaces_conf_files" {
 
   tags = {
     Name        = "KineticWorkspacesConfig"
-    Name        = "kineticS3WriteOnly"
-    Environment = "production"
-    Project     = "Research"
-    Application = "Kinetic"
   }
 }
 

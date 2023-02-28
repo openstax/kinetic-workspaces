@@ -1,17 +1,23 @@
-data "archive_file" "kinetic_ws_front_desk" {
-  type = "zip"
+# data "archive_file" "kinetic_ws_front_desk" {
+#   type = "zip"
 
-  source_dir  = "${path.module}/../front-desk"
-  output_path = "${path.module}/kinetic-workspaces-front-desk.zip"
+#   source_dir  = "${path.module}/../front-desk"
+#   output_path = "${path.module}/kinetic-workspaces-front-desk.zip"
+#   # excludes = ["dist/client"]
+# }
+
+locals {
+  front_desk_archive = "${path.module}/../front-desk/archive.zip"
 }
 
 resource "aws_s3_object" "kinetic_ws_front_desk_lambda" {
   bucket = aws_s3_bucket.kinetic_ws_front_desk_lambda.id
 
   key    = "kinetic-workspaces-front-desk.zip"
-  source = data.archive_file.kinetic_ws_front_desk.output_path
+  source = local.front_desk_archive
+#  data.archive_file.kinetic_ws_front_desk.output_path
 
-  etag = filemd5(data.archive_file.kinetic_ws_front_desk.output_path)
+  etag = filemd5(local.front_desk_archive)
 }
 
 resource "aws_s3_bucket" "kinetic_ws_front_desk_lambda" {
@@ -27,13 +33,15 @@ resource "aws_s3_bucket_acl" "kinetic_lambda" {
 resource "aws_apigatewayv2_api" "kinetic_ws_front_desk" {
   name          = "kinetic_ws_front_desk_lambda_gw"
   protocol_type = "HTTP"
+
 }
 
 resource "aws_apigatewayv2_stage" "kinetic_ws_front_desk" {
   api_id = aws_apigatewayv2_api.kinetic_ws_front_desk.id
 
-  name        = "serverless_lambda_stage"
+  name        = "$default"
   auto_deploy = true
+
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.kinetic_ws_front_desk_api_gw.arn
@@ -55,18 +63,31 @@ resource "aws_apigatewayv2_stage" "kinetic_ws_front_desk" {
 }
 
 
+resource "aws_dynamodb_table" "kinetic_ws_front_desk" {
+  name             = "KineticWSFrontDesk"
+  hash_key         = "id"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 5
+  write_capacity = 5
+  attribute {
+    name = "id"
+    type = "S"
+  }
+}
+
+
 resource "aws_lambda_function" "kinetic_ws_front_desk" {
-  function_name = "HelloWorld"
+  function_name = "KineticWorkspacesFrontDesk"
 
   s3_bucket = aws_s3_bucket.kinetic_ws_front_desk_lambda.id
   s3_key    = aws_s3_object.kinetic_ws_front_desk_lambda.key
 
   runtime = "nodejs18.x"
-  handler = "main.handler"
+  handler = "index.handler"
 
-  source_code_hash = data.archive_file.kinetic_ws_front_desk.output_base64sha256
+  source_code_hash = filebase64sha256(local.front_desk_archive)
 
-  role = aws_iam_role.kinetic_ws_front_desk_exec.arn
+  role = aws_iam_role.kinetic_ws_front_desk.arn
 }
 
 resource "aws_cloudwatch_log_group" "kinetic_ws_front_desk" {
@@ -75,8 +96,8 @@ resource "aws_cloudwatch_log_group" "kinetic_ws_front_desk" {
   retention_in_days = 30
 }
 
-resource "aws_iam_role" "kinetic_ws_front_desk_exec" {
-  name = "serverless_lambda"
+resource "aws_iam_role" "kinetic_ws_front_desk" {
+  name = "kinetic_ws_front_desk"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -87,13 +108,34 @@ resource "aws_iam_role" "kinetic_ws_front_desk_exec" {
       Principal = {
         Service = "lambda.amazonaws.com"
       }
-      }
-    ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "kinetic_ws_front_desk_db" {
+  name   = "kinetic_ws_front_desk_db"
+  role   = aws_iam_role.kinetic_ws_front_desk.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [ {
+      Sid = "APIAccessForDynamoDBStreams"
+      Effect = "Allow",
+      Resource = aws_dynamodb_table.kinetic_ws_front_desk.arn,
+      Action = [
+        "dynamodb:BatchGetItem",
+        "dynamodb:GetItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+      ],
+    }]
   })
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_policy" {
-  role       = aws_iam_role.kinetic_ws_front_desk_exec.name
+  role       = aws_iam_role.kinetic_ws_front_desk.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
@@ -128,25 +170,31 @@ resource "aws_lambda_permission" "kinetic_ws_front_desk_api_gw" {
 }
 
 
-resource "aws_apigatewayv2_domain_name" "kinetic_workspaces" {
-  domain_name = "${var.subDomainName}.${var.baseDomainName}"
+# resource "aws_apigatewayv2_domain_name" "kinetic_workspaces" {
+#   domain_name = "${var.subDomainName}.${var.baseDomainName}"
 
-  domain_name_configuration {
-    certificate_arn = aws_acm_certificate.kinetic_workspaces.arn
-    endpoint_type   = "REGIONAL"
-    security_policy = "TLS_1_2"
-  }
+#   domain_name_configuration {
+#     certificate_arn = aws_acm_certificate.kinetic_workspaces.arn
+#     endpoint_type   = "REGIONAL"
+#     security_policy = "TLS_1_2"
+#   }
 
-  depends_on = [aws_acm_certificate_validation.kinetic_workspaces]
-}
+#   depends_on = [aws_acm_certificate_validation.kinetic_workspaces]
+# }
 
-resource "aws_apigatewayv2_api_mapping" "kinetic_workspaces" {
-  stage       = aws_apigatewayv2_stage.kinetic_ws_front_desk.id
-  api_id      = aws_apigatewayv2_api.kinetic_ws_front_desk.id
-  domain_name = aws_apigatewayv2_domain_name.kinetic_workspaces.id
-}
+# resource "aws_apigatewayv2_api_mapping" "kinetic_workspaces" {
+#   stage       = aws_apigatewayv2_stage.kinetic_ws_front_desk.id
+#   api_id      = aws_apigatewayv2_api.kinetic_ws_front_desk.id
+#   domain_name = aws_apigatewayv2_domain_name.kinetic_workspaces.id
+# }
 
 output "kinetic_workspaces_front_desk_url" {
   description = "URL for API Gateway stage."
   value       = "https://${var.subDomainName}.${var.baseDomainName}/"
 }
+
+output "front_desk_invoke_url" {
+  value = aws_apigatewayv2_stage.kinetic_ws_front_desk.invoke_url
+}
+
+
