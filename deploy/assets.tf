@@ -52,7 +52,7 @@ EOF
 
 
 // Cloudfront Distribution
-resource "aws_cloudfront_distribution" "kinetic_ws_assets" {
+resource "aws_cloudfront_distribution" "kinetic_workspaces_cloudfront" {
   origin {
     domain_name = aws_s3_bucket.kinetic_ws_assets.bucket_regional_domain_name
     origin_id   = local.assets_s3_origin_id
@@ -68,7 +68,10 @@ resource "aws_cloudfront_distribution" "kinetic_ws_assets" {
     }
   }
 
-  aliases = ["${var.wsAssetsSubDomainName}.${var.baseDomainName}"]
+  aliases = [
+    "${var.subDomainName}.${var.baseDomainName}",
+    "*.${var.subDomainName}.${var.baseDomainName}",
+  ]
 
   default_cache_behavior {
     allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -79,6 +82,45 @@ resource "aws_cloudfront_distribution" "kinetic_ws_assets" {
     cache_policy_id = aws_cloudfront_cache_policy.kinetic_ws_assets.id
 
     viewer_protocol_policy = "allow-all"
+  }
+
+  # website {
+  #   index_document = "index.html"
+  #   error_document = "error.html"
+
+  #   # Add routing rules if required
+  #   routing_rules = jsonencode([{
+  #     Condition = {
+  #       KeyPrefixEquals: "editor/",
+  #     },
+  #     Redirect = {
+  #       ReplaceKeyPrefixWith = "editor/"
+  #     }
+  #   }])
+  # }
+
+  # Cache behavior with precedence 0
+  ordered_cache_behavior {
+    path_pattern     = "/editor/*"
+    target_origin_id = local.ws_editor_origin_id
+
+    lambda_function_association {
+      event_type = "origin-request"
+      lambda_arn = "${aws_lambda_function.kinetic_ws_lambda_edge.qualified_arn}"
+    }
+
+    allowed_methods  = ["PUT"]
+    //    target_origin_id = local.s3_origin_id
+
+    forwarded_values {
+      query_string = true
+
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
   }
 
   ordered_cache_behavior {

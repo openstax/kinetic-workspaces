@@ -56,8 +56,6 @@ resource "aws_imagebuilder_image_recipe" "kinetic_workspaces" {
   version      = "1.0.0"
 }
 
-
-
 resource "aws_imagebuilder_distribution_configuration" "kinetic_workspaces" {
   name = "kinetic_workspaces_distribution_configuration"
 
@@ -71,6 +69,19 @@ resource "aws_imagebuilder_distribution_configuration" "kinetic_workspaces" {
 }
 
 resource "aws_imagebuilder_component" "kinetic_workspaces" {
+  name     = "deploy_kinetic_workspaces"
+  platform = "Linux"
+  version  = "1.0.0"
+
+  # this does not force replacement when the file changes, it only tells terraform to wait
+  # until their uploaded before running this step. To force regeneration run:
+  # terraform apply -replace=aws_imagebuilder_component.kinetic_workspaces
+  depends_on = [
+    aws_s3_object.kinetic_workspaces_conf_files["nginx-proxy.conf"],
+    aws_s3_object.kinetic_workspaces_conf_files["provision-letsencrypt"],
+  ]
+
+  # ExecuteBash https://docs.aws.amazon.com/imagebuilder/latest/userguide/toe-action-modules.html#action-modules-executebash
   data = yamlencode({
     phases = [{
       name = "build"
@@ -78,19 +89,22 @@ resource "aws_imagebuilder_component" "kinetic_workspaces" {
         action = "ExecuteBash"
         inputs = {
           commands = [
-            "sudo wget -O /tmp/ssm.deb https://s3.${var.aws_region}.amazonaws.com/amazon-ssm-${var.aws_region}/latest/debian_amd64/amazon-ssm-agent.deb",
+            "export DEBIAN_FRONTEND=noninteractive",
+            "sudo wget --no-verbose -O /tmp/ssm.deb https://s3.${var.aws_region}.amazonaws.com/amazon-ssm-${var.aws_region}/latest/debian_amd64/amazon-ssm-agent.deb",
             "sudo dpkg -i /tmp/ssm.deb",
             "sudo apt-get update",
-            "sudo apt-get install -y gnupg",
-            "echo 'deb http://cloud.r-project.org/bin/linux/debian bullseye-cran40/' | sudo tee -a /etc/apt/sources.list.d/r.list > /dev/null",
-            "sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key '95C0FAF38DB3CCAD0C080A7BDC78B2DDEABC47B7'",
-            "sudo apt-get update",
-            "sudo apt-get install -y libatlas3-base r-base r-base-dev gdebi-core",
-            "sudo wget -O /tmp/rstudio.deb  https://download2.rstudio.org/server/bionic/amd64/rstudio-server-2022.12.0-353-amd64.deb",
-            "sudo apt-get -y upgrade",
-            "sudo gdebi -n /tmp/rstudio.deb",
-            "echo www-port=80 | sudo tee -a /etc/rstudio/rserver.conf > /dev/null",
-            "adduser --disabled-password --shell /bin/false --gecos 'Kinetic Workspace' kinetic",
+            "cd /tmp && git clone https://github.com/aws/efs-utils && cd /tmp/efs-utils",
+            "./build-deb.sh && sudo apt-get -y install ./build/amazon-efs-utils*deb",
+            "aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/install_r_and_pkgs /tmp/",
+            "sudo bash /tmp/install_r_and_pkgs",
+            "echo ${random_id.rstudio_cookie_key.hex} > /var/lib/rstudio-server/secure-cookie-key",
+            "sudo apt-get install -y nfs-common nginx-light certbot python3-certbot-dns-route53 ruby-aws-sdk-s3",
+            "aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/provision-letsencrypt /tmp/",
+            "ruby /tmp/provision-letsencrypt ${var.subDomainName}.${var.baseDomainName} ${aws_s3_bucket.kinetic_workspaces_conf_files.id}",
+            "sudo aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/nginx-proxy.conf /etc/nginx/sites-enabled/default",
+            "sudo sudo apt-get clean",
+            "sudo addgroup --gid 1010 kinetic",
+            "sudo adduser --disabled-password --uid 1010 --gid 1010 --shell /bin/false --gecos 'Kinetic Workspace User' ${var.editor_login}",
           ]
         }
         name      = "download_and_install_kinetic_workspaces"
@@ -99,9 +113,6 @@ resource "aws_imagebuilder_component" "kinetic_workspaces" {
     }]
     schemaVersion = 1.0
   })
-  name     = "deploy_kinetic_workspaces"
-  platform = "Linux"
-  version  = "1.0.0"
 }
 
 resource "aws_imagebuilder_image" "kinetic_workspaces" {
@@ -114,7 +125,7 @@ resource "aws_imagebuilder_infrastructure_configuration" "kinetic_workspaces" {
   name                          = "kinetic_workspaces_infrastructure_configuration"
   description                   = "AWS image builder config for EC2 with Kinetic_Workspaces hosted"
   instance_profile_name         = aws_iam_instance_profile.ec2_kinetic_workspaces.name
-  instance_types                = ["t3.micro"]
+  instance_types                = ["t3.2xlarge"] # using a 2xlarge to speed up builds
   security_group_ids            = [aws_security_group.ec2_kinetic_workspaces.id]
   subnet_id                     = aws_subnet.kinetic_workspaces.id
   terminate_instance_on_failure = true
@@ -137,8 +148,6 @@ resource "aws_instance" "kinetic_workspaces" {
 }
 
 
-
-
 output "workspaces_rstudio_ami_id" {
   value = data.aws_ami.kinetic_workspaces.id
 }
@@ -147,3 +156,15 @@ output "ssh_key_name" {
   value = aws_key_pair.kinetic_workspaces.key_name
 }
 
+# resource "jwt_hashed_token" "authentication_hash" {
+#   secret = "d4ec99b6843c41d6ab497c3898633a6d"
+#   claims_json = "kinetic|Wed%2C%2001%20Mar%202023%2016%3A01%3A54%20GMT"
+# }
+
+# # kinetic|Wed%2C%2001%20Mar%202023%2016%3A01%3A54%20GMT|YOG3BqT9JTe7gd%2BDbnne5kPH3mNZh%2B2WTBUo%2FWmCc58%3D
+# # kinetic|Sat, 24 Sep 2022 17:46:21 GMT|GrA/vSHTFZiXglz4rRuBvH7anv/iaI+GzswvCokHJJA=
+# # |YOG3BqT9JTe7gd%2BDbnne5kPH3mNZh%2B2WTBUo%2FWmCc58%3D
+
+# output "authentication_cookie" {
+#   value = jwt_hashed_token.authentication_hash
+# }
