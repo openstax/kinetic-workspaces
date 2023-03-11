@@ -1,0 +1,15 @@
+#!/bin/bash
+
+#set -x
+
+ID=$1
+
+[[ -z $IP ]] && IP=`./ip-of-editor-instance $ID`
+
+OPTS="-o UserKnownHostsFile=/dev/null -o CheckHostIP=no -o LogLevel=ERROR -o StrictHostKeyChecking=no -i ../tmp/key.pem"
+
+if [[ -n $SCP ]]; then
+  scp $OPTS admin@$IP:"${@:2}"
+else
+  ssh $OPTS admin@$IP "${@:2}"
+fi

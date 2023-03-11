@@ -1,0 +1,47 @@
+#!/usr/bin/env ruby
+
+require 'aws-sdk-s3'
+
+if ARGV.length < 2
+  $stderr.puts "usage:\n#{$PROGAM_NAME} <domain> <bucket>"
+  exit 1
+end
+
+$stderr.puts ARGV.join(' ')
+
+DOMAIN = ARGV[0]
+BUCKET = ARGV[1]
+TGZ = '/tmp/letsencrypt.tar.gz'.freeze
+BACKUP = 'cache/letsencrypt.tar.gz'.freeze
+
+S3 = Aws::S3::Client.new(region: 'us-east-1')
+
+def die(msg)
+  warn msg
+  exit 2
+end
+
+def run(cmd)
+  output = `#{cmd}`
+  die("#{command} failed with\n#{output}") unless $?.exitstatus.zero?
+end
+
+def download
+  S3.get_object(bucket: BUCKET, key: BACKUP, response_target: TGZ)
+  puts 'using previously generated letsencrypt files'
+  run("sudo tar -zxf #{TGZ} -C /etc")
+  true
+rescue Aws::S3::Errors::NoSuchBucket, Aws::S3::Errors::NoSuchKey
+  false
+end
+
+def provision
+  puts "requesting new letsencrypt cert for *.#{DOMAIN}"
+  run("sudo certbot certonly --agree-tos -n -m letsencrypt@openstax.org --dns-route53 -d *.#{DOMAIN}")
+  run("sudo tar -cvzf #{TGZ} -C /etc letsencrypt")
+  File.open(TGZ, 'rb') do |file|
+    S3.put_object(bucket: BUCKET, key: BACKUP, body: file)
+  end
+end
+
+provision unless download

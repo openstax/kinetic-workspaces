@@ -16,7 +16,7 @@ resource "aws_s3_bucket" "kinetic_ws_assets" {
 resource "aws_s3_bucket_acl" "kinetic_ws_assets" {
   bucket = aws_s3_bucket.kinetic_ws_assets.id
 
-  acl = "public-read"
+  acl = "private"
 }
 
 resource "aws_s3_bucket_cors_configuration" "kinetic_ws_assets" {
@@ -28,6 +28,15 @@ resource "aws_s3_bucket_cors_configuration" "kinetic_ws_assets" {
   }
 }
 
+resource "aws_s3_bucket_website_configuration" "kinetic_workspaces_editor" {
+  bucket = aws_s3_bucket.kinetic_ws_assets.id
+  index_document {
+    suffix = "index.html"
+  }
+  error_document {
+    key = "error.html"
+  }
+}
 
 resource "aws_s3_bucket_policy" "kinetic_ws_assets" {
   bucket = aws_s3_bucket.kinetic_ws_assets.id
@@ -41,6 +50,8 @@ resource "aws_s3_bucket_policy" "kinetic_ws_assets" {
       "Principal": "*",
       "Action": [ "s3:GetObject" ],
       "Resource": [
+        "${aws_s3_bucket.kinetic_ws_assets.arn}/*.html",
+        "${aws_s3_bucket.kinetic_ws_assets.arn}/editor/*",
         "${aws_s3_bucket.kinetic_ws_assets.arn}/assets",
         "${aws_s3_bucket.kinetic_ws_assets.arn}/assets/*"
       ]
@@ -52,15 +63,42 @@ EOF
 
 
 // Cloudfront Distribution
-resource "aws_cloudfront_distribution" "kinetic_workspaces_cloudfront" {
-  origin {
-    domain_name = aws_s3_bucket.kinetic_ws_assets.bucket_regional_domain_name
-    origin_id   = local.assets_s3_origin_id
-  }
+resource "aws_cloudfront_distribution" "kinetic_workspaces" {
+  default_root_object = "index.html"
 
   enabled         = true
   is_ipv6_enabled = true
-  comment         = "Kinetic assets"
+  comment         = "Kinetic workspaces"
+
+  origin {
+    domain_name = aws_s3_bucket_website_configuration.kinetic_workspaces_editor.website_endpoint
+    origin_id   = local.assets_s3_origin_id
+    custom_origin_config {
+      http_port                = 80
+      https_port               = 443
+      origin_keepalive_timeout = 5
+      origin_protocol_policy   = "http-only"
+      origin_read_timeout      = 30
+      origin_ssl_protocols = [
+        "TLSv1.2",
+      ]
+    }
+  }
+
+  origin {
+    domain_name = replace(aws_lambda_function_url.kinetic_ws_front_desk.function_url, "/^https?://([^/]*).*/", "$1")
+    origin_id   = aws_lambda_function_url.kinetic_ws_front_desk.id
+    custom_origin_config {
+      http_port                = 80
+      https_port               = 443
+      origin_keepalive_timeout = 5
+      origin_protocol_policy   = "https-only"
+      origin_read_timeout      = 30
+      origin_ssl_protocols = [
+        "TLSv1.2",
+      ]
+    }
+  }
 
   restrictions {
     geo_restriction {
@@ -81,66 +119,55 @@ resource "aws_cloudfront_distribution" "kinetic_workspaces_cloudfront" {
 
     cache_policy_id = aws_cloudfront_cache_policy.kinetic_ws_assets.id
 
-    viewer_protocol_policy = "allow-all"
+    viewer_protocol_policy = "redirect-to-https"
   }
 
-  # website {
-  #   index_document = "index.html"
-  #   error_document = "error.html"
-
-  #   # Add routing rules if required
-  #   routing_rules = jsonencode([{
-  #     Condition = {
-  #       KeyPrefixEquals: "editor/",
-  #     },
-  #     Redirect = {
-  #       ReplaceKeyPrefixWith = "editor/"
-  #     }
-  #   }])
-  # }
-
-  # Cache behavior with precedence 0
   ordered_cache_behavior {
-    path_pattern     = "/editor/*"
-    target_origin_id = local.ws_editor_origin_id
+    path_pattern     = "/status"
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = aws_lambda_function_url.kinetic_ws_front_desk.id
 
-    lambda_function_association {
-      event_type = "origin-request"
-      lambda_arn = "${aws_lambda_function.kinetic_ws_lambda_edge.qualified_arn}"
-    }
 
-    allowed_methods  = ["PUT"]
-    //    target_origin_id = local.s3_origin_id
+    compress               = true
+    default_ttl            = 0
+    max_ttl                = 0
+    min_ttl                = 0
+    viewer_protocol_policy = "redirect-to-https"
 
     forwarded_values {
+      headers = [
+        "Origin",
+      ]
+      query_string            = false
+      query_string_cache_keys = []
+
+      cookies {
+        forward           = "all"
+        whitelisted_names = []
+      }
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern     = "/editor/*"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD", "OPTIONS"]
+    target_origin_id = local.assets_s3_origin_id
+    # cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # AWS caching disabled policy
+    # origin_request_policy_id = "33f36d7e-f396-46d9-90e0-52428a34d9dc" # forward all
+    forwarded_values {
       query_string = true
+      headers      = ["Origin"]
 
       cookies {
         forward = "all"
       }
     }
 
-    viewer_protocol_policy = "redirect-to-https"
-  }
-
-  ordered_cache_behavior {
-    path_pattern     = "/*"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD", "OPTIONS"]
-    target_origin_id = local.assets_s3_origin_id
-
-    forwarded_values {
-      query_string = false
-      headers      = ["Origin"]
-
-      cookies {
-        forward = "none"
-      }
-    }
-
     min_ttl                = 0
-    default_ttl            = 86400
-    max_ttl                = 31536000
+    default_ttl            = 0
+    max_ttl                = 0
     compress               = true
     viewer_protocol_policy = "redirect-to-https"
   }

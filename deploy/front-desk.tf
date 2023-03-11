@@ -7,13 +7,23 @@
 # }
 
 locals {
-  front_desk_archive = "${path.module}/../front-desk/archive.zip"
+  front_desk_archive = "${path.module}/../front-desk/lambda/bundled.zip"
 }
+
+# resource "null_resource" "build_front_desk_lambda" {
+#   triggers = {
+
+#   }
+
+#   provisioner "local-exec" {
+#     command = "cd ../front-desk && ./bin/build"
+#   }
+# }
 
 resource "aws_s3_object" "kinetic_ws_front_desk_lambda" {
   bucket = aws_s3_bucket.kinetic_ws_front_desk_lambda.id
 
-  key    = "kinetic-workspaces-front-desk.zip"
+  key    = "front-desk.zip"
   source = local.front_desk_archive
   #  data.archive_file.kinetic_ws_front_desk.output_path
 
@@ -67,8 +77,9 @@ resource "aws_lambda_function" "kinetic_ws_front_desk" {
   s3_bucket = aws_s3_bucket.kinetic_ws_front_desk_lambda.id
   s3_key    = aws_s3_object.kinetic_ws_front_desk_lambda.key
 
+  timeout = 120
   runtime = "nodejs18.x"
-  handler = "index.handler"
+  handler = "lambda.handler"
 
   source_code_hash = filebase64sha256(local.front_desk_archive)
 
@@ -76,12 +87,35 @@ resource "aws_lambda_function" "kinetic_ws_front_desk" {
   environment {
     variables = {
       environment = var.environment_name,
-      NODE_ENV = "production"
+      NODE_ENV    = "production"
     }
   }
-
 }
 
+resource "aws_cloudwatch_event_rule" "kinetic_ws_fd_housekeeping_every_15_minutes" {
+  name                = "every-15-minutes"
+  description         = "Fires every 15 minutes"
+  schedule_expression = "rate(15 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "kinetic_ws_fd_housekeeping" {
+  rule      = aws_cloudwatch_event_rule.kinetic_ws_fd_housekeeping_every_15_minutes.name
+  target_id = aws_lambda_function.kinetic_ws_front_desk.id
+  arn       = aws_lambda_function.kinetic_ws_front_desk.arn
+}
+
+resource "aws_lambda_permission" "cloudwatch_front_desk_housekeeping" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.kinetic_ws_front_desk.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.kinetic_ws_fd_housekeeping_every_15_minutes.arn
+}
+
+resource "aws_lambda_function_url" "kinetic_ws_front_desk" {
+  function_name      = aws_lambda_function.kinetic_ws_front_desk.function_name
+  authorization_type = "NONE"
+}
 
 resource "aws_dynamodb_table" "kinetic_ws_front_desk" {
   name           = "KineticWSFrontDesk"
@@ -164,21 +198,92 @@ resource "aws_iam_role_policy" "kinetic_ws_front_desk_db" {
   role = aws_iam_role.kinetic_ws_front_desk.id
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
-      Sid      = "APIAccessForDynamoDBStreams"
-      Effect   = "Allow",
-      Resource = aws_dynamodb_table.kinetic_ws_front_desk.arn,
-      Action = [
-        "dynamodb:BatchGetItem",
-        "dynamodb:GetItem",
-        "dynamodb:Query",
-        "dynamodb:Scan",
-        "dynamodb:BatchWriteItem",
-        "dynamodb:PutItem",
-        "dynamodb:UpdateItem",
-      ],
-    }]
-  })
+    Statement = [
+      {
+        Sid      = "APIAccessForDynamoDBStreams"
+        Effect   = "Allow",
+        Resource = aws_dynamodb_table.kinetic_ws_front_desk.arn,
+        Action = [
+          "dynamodb:DeleteItem",
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:BatchWriteItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+        ],
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:GetObject"
+        ],
+        Resource = "${aws_s3_bucket.kinetic_workspaces_conf_files.arn}/*"
+      },
+      {
+        Sid    = "AllowRunInstancesWithRestrictions"
+        Effect = "Allow",
+        Action = [
+          "ec2:RunInstances",
+          "ec2:DescribeVpcs",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeKeyPairs",
+          "ec2:DescribeInstances",
+          "ec2:TerminateInstances",
+          "ec2:DescribeInstances",
+          "ec2:DescribeSecurityGroups",
+        ],
+        Resource = [
+          "*"
+        ],
+        Effect = "Allow",
+        # Condition = {
+        #   StringEquals = {
+        #     "ec2:ResourceTag/Application" = "KineticWorkspaces"
+        #   }
+        # }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "route53:ChangeResourceRecordSets"
+        ],
+        Resource = [
+          aws_route53_zone.kinetic_workspaces.arn
+        ]
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "ec2:CreateTags"
+        ],
+        Resource = "arn:aws:ec2:*:*:instance/*",
+        # Condition = {
+        #   StringEquals = {
+        #     "ec2:CreateAction" : "RunInstances"
+        #   }
+        # }
+      },
+      {
+        Sid    = "AllowMountEFSWithRestrictions"
+        Effect = "Allow",
+        Action = [
+          "elasticfilesystem:CreateAccessPoint",
+          "elasticfilesystem:DeleteAccessPoint",
+        ],
+        Resource = [
+          "*"
+          # doesn't work fro delete
+          #aws_efs_file_system.kinetic_workspaces.arn
+        ],
+        # Effect = "Allow",
+        # Condition = {
+        #   StringEquals = {
+        #     "elasticfilesystem:AccessPointArn" = "KineticWorkspaces"
+        #   }
+        # }
+      }
+  ] })
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_policy" {
@@ -186,22 +291,38 @@ resource "aws_iam_role_policy_attachment" "lambda_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_apigatewayv2_integration" "kinetic_ws_front_desk" {
-  api_id = aws_apigatewayv2_api.kinetic_ws_front_desk.id
-
-  integration_uri    = aws_lambda_function.kinetic_ws_front_desk.invoke_arn
-  integration_type   = "AWS_PROXY"
-  integration_method = "POST"
-}
 
 
 
-resource "aws_apigatewayv2_route" "kinetic_ws_front_desk" {
-  api_id = aws_apigatewayv2_api.kinetic_ws_front_desk.id
+# {
+#       Sid = "FunctionURLAllowPublicAccess",
+#      Effect = "Allow",
+#      Principal = "*",
+#      Action = "lambda:InvokeFunctionUrl",
+#      Resource = aws_iam_role.kinetic_ws_front_desk.arn
+#      Condition = {
+#        StringEquals = {
+#          "lambda:FunctionUrlAuthType" = "NONE"
+#        }
+#      }
+#    }
 
-  route_key = "$default"
-  target    = "integrations/${aws_apigatewayv2_integration.kinetic_ws_front_desk.id}"
-}
+# resource "aws_apigatewayv2_integration" "kinetic_ws_front_desk" {
+#   api_id = aws_apigatewayv2_api.kinetic_ws_front_desk.id
+
+#   integration_uri    = aws_lambda_function.kinetic_ws_front_desk.invoke_arn
+#   integration_type   = "AWS_PROXY"
+#   integration_method = "POST"
+# }
+
+
+
+# resource "aws_apigatewayv2_route" "kinetic_ws_front_desk" {
+#   api_id = aws_apigatewayv2_api.kinetic_ws_front_desk.id
+
+#   route_key = "$default"
+#   target    = "integrations/${aws_apigatewayv2_integration.kinetic_ws_front_desk.id}"
+# }
 
 resource "aws_cloudwatch_log_group" "kinetic_ws_front_desk_api_gw" {
   name = "/aws/api_gw/${aws_apigatewayv2_api.kinetic_ws_front_desk.name}"
@@ -219,32 +340,32 @@ resource "aws_lambda_permission" "kinetic_ws_front_desk_api_gw" {
 }
 
 
-resource "aws_apigatewayv2_domain_name" "kinetic_workspaces" {
-  domain_name = "${var.subDomainName}.${var.baseDomainName}"
+# resource "aws_apigatewayv2_domain_name" "kinetic_workspaces" {
+#   domain_name = "${var.subDomainName}.${var.baseDomainName}"
 
-  domain_name_configuration {
-    certificate_arn = aws_acm_certificate.kinetic_workspaces.arn
-    endpoint_type   = "REGIONAL"
-    security_policy = "TLS_1_2"
-  }
+#   domain_name_configuration {
+#     certificate_arn = aws_acm_certificate.kinetic_workspaces.arn
+#     endpoint_type   = "REGIONAL"
+#     security_policy = "TLS_1_2"
+#   }
 
-  depends_on = [aws_acm_certificate_validation.kinetic_workspaces]
-}
+#   depends_on = [aws_acm_certificate_validation.kinetic_workspaces]
+# }
 
-resource "aws_apigatewayv2_api_mapping" "kinetic_workspaces" {
-  stage       = aws_apigatewayv2_stage.kinetic_ws_front_desk.id
-  api_id      = aws_apigatewayv2_api.kinetic_ws_front_desk.id
-  domain_name = aws_apigatewayv2_domain_name.kinetic_workspaces.id
-}
+# resource "aws_apigatewayv2_api_mapping" "kinetic_workspaces" {
+#   stage       = aws_apigatewayv2_stage.kinetic_ws_front_desk.id
+#   api_id      = aws_apigatewayv2_api.kinetic_ws_front_desk.id
+#   domain_name = aws_apigatewayv2_domain_name.kinetic_workspaces.id
+# }
 
 output "kinetic_workspaces_front_desk_url" {
-  description = "URL for API Gateway stage."
-  value       = "https://${var.subDomainName}.${var.baseDomainName}/"
+  description = "URL for API lambda stage."
+  value       = aws_lambda_function_url.kinetic_ws_front_desk.function_url
 }
 
-output "front_desk_invoke_url" {
-  value = aws_apigatewayv2_stage.kinetic_ws_front_desk.invoke_url
-}
+# output "front_desk_invoke_url" {
+#   value = aws_apigatewayv2_stage.kinetic_ws_front_desk.invoke_url
+# }
 
 
 output "front_desk_config_entry" {

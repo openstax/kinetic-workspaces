@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+
+
+set -ex
+
+export NODE_ENV=production
+
+LAMBDA=KineticWorkspacesFrontDesk
+
+ID=0.0.1
+
+[ "$(ls -A lambda)" ] && rm -r lambda/*
+
+yarn run build
+
+# must keep list in sync with "externals" in rollup.conf
+for pkg in asn1 bcrypt-pbkdf ssh2 safer-buffer tweetnacl
+do
+  cp -r node_modules/$pkg lambda/
+done
+
+cd lambda
+
+zip -rq bundled.zip *

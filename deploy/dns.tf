@@ -44,29 +44,29 @@ resource "aws_route53_record" "kinetic_workspaces" {
   zone_id = aws_route53_zone.kinetic_workspaces.id
 
   alias {
-    # name    = aws_cloudfront_distribution.kinetic_ws_url_rewriter.domain_name
-    # zone_id = aws_cloudfront_distribution.kinetic_ws_url_rewriter.hosted_zone_id
+    name    = aws_cloudfront_distribution.kinetic_workspaces.domain_name
+    zone_id = aws_cloudfront_distribution.kinetic_workspaces.hosted_zone_id
     evaluate_target_health = true
 
-    name                   = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].target_domain_name
-    zone_id                = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].hosted_zone_id
+    # name                   = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].target_domain_name
+    # zone_id                = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].hosted_zone_id
   }
 }
 
-# resource "aws_route53_record" "kinetic_workspaces_wildcard" {
-#   name    = "*.${var.subDomainName}.${var.baseDomainName}"
-#   type    = "A"
-#   zone_id = data.aws_route53_zone.kinetic.zone_id
+resource "aws_route53_record" "kinetic_workspaces_wildcard" {
+  name    = "*.${var.subDomainName}.${var.baseDomainName}"
+  type    = "A"
+  zone_id = data.aws_route53_zone.kinetic.zone_id
 
-#   alias {
-#     name    = aws_cloudfront_distribution.kinetic_ws_url_rewriter.domain_name
-#     zone_id = aws_cloudfront_distribution.kinetic_ws_url_rewriter.hosted_zone_id
-#     evaluate_target_health = true
+  alias {
+    name    = aws_cloudfront_distribution.kinetic_workspaces.domain_name
+    zone_id = aws_cloudfront_distribution.kinetic_workspaces.hosted_zone_id
+    evaluate_target_health = true
 
-#     # name                   = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].target_domain_name
-#     # zone_id                = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].hosted_zone_id
-#   }
-# }
+    # name                   = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].target_domain_name
+    # zone_id                = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].hosted_zone_id
+  }
+}
 
 # resource "aws_route53_record" "kinetic_workspaces_editor" {
 #   name    = "editor"
@@ -81,19 +81,19 @@ resource "aws_route53_record" "kinetic_workspaces" {
 #   }
 # }
 
-resource "aws_route53_record" "kinetic_ws_assets" {
-  name    = var.wsAssetsSubDomainName
-  type    = "A"
-  zone_id = data.aws_route53_zone.kinetic.zone_id
+# resource "aws_route53_record" "kinetic_ws_assets" {
+#   name    = var.wsAssetsSubDomainName
+#   type    = "A"
+#   zone_id = data.aws_route53_zone.kinetic.zone_id
 
-  allow_overwrite = true
+#   allow_overwrite = true
 
-  alias {
-    name                   = aws_cloudfront_distribution.kinetic_ws_assets.domain_name
-    zone_id                = aws_cloudfront_distribution.kinetic_ws_assets.hosted_zone_id
-    evaluate_target_health = false
-  }
-}
+#   alias {
+#     name                   = aws_cloudfront_distribution.kinetic_workspaces_cloudfront.domain_name
+#     zone_id                = aws_cloudfront_distribution.kinetic_workspaces_cloudfront.hosted_zone_id
+#     evaluate_target_health = false
+#   }
+# }
 
 output "hosted_zone_id" {
   value = aws_route53_zone.kinetic_workspaces.id

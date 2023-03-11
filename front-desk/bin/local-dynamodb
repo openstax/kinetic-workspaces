@@ -1,0 +1,36 @@
+#!/bin/sh
+
+CONTAINER=LocalDynamoDB
+TABLE=KineticWSFrontDesk
+
+export AWS_PAGER="" # silence cli using "less" to display output
+
+
+
+docker ps -f "name=$CONTAINER" --format '{{.Names}}' | grep -q $CONTAINER
+if [[ $? == 0 ]]; then
+  docker stop $CONTAINER
+fi
+
+docker run -d --rm -p 8000:8000 \
+  --name $CONTAINER \
+  amazon/dynamodb-local \
+  -jar DynamoDBLocal.jar -sharedDb
+sleep 3
+
+aws dynamodb list-tables --endpoint-url http://localhost:8000 | grep -q $TABLE
+    if [[ $? != 0 ]]; then
+
+    echo 'add table'
+    aws dynamodb create-table \
+        --endpoint-url http://localhost:8000 \
+        --table-name $TABLE \
+        --attribute-definitions AttributeName=pk,AttributeType=S AttributeName=sk,AttributeType=S \
+        --key-schema AttributeName=pk,KeyType=HASH AttributeName=sk,KeyType=RANGE \
+        --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5
+
+    cd ../deploy
+
+    terraform output -raw front_desk_config_entry > /tmp/kws-config.json
+    aws dynamodb put-item --endpoint-url http://localhost:8000 --table-name KineticWSFrontDesk --item file:///tmp/kws-config.json
+fi

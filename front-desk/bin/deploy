@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+
+set -ex
+
+LAMBDA=KineticWorkspacesFrontDesk
+LAMBDA_BUCKET=kinetic-workspaces-lambdas
+ASSETS_BUCKET=kinetic-workspaces-assets
+
+export AWS_PAGER="" # silence cli using "less" to display output
+
+./bin/build
+
+aws s3 cp lambda/bundled.zip s3://kinetic-workspaces-lambdas/front-desk.zip
+
+aws lambda update-function-code --function-name $LAMBDA --s3-bucket $LAMBDA_BUCKET --s3-key front-desk.zip
+
+sleep 5
+
+aws lambda publish-version --function-name $LAMBDA
+
+s5cmd cp dist/assets/ s3://$ASSETS_BUCKET/assets/
+s5cmd cp  -acl public-read error.html s3://$ASSETS_BUCKET/error.html
+s5cmd cp  -acl public-read dist/index.html s3://$ASSETS_BUCKET/editor/index.html

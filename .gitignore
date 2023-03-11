@@ -2,5 +2,9 @@
 .idea
 *.log
 tmp/
-
+*.zip
+*.tar.gz
 infrastructure.json
+front-desk/lambda
+front-desk/dist
+*.pem

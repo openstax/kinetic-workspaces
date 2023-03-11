@@ -1,0 +1,37 @@
+
+sourced=0
+if [ -n "$ZSH_VERSION" ]; then
+  case $ZSH_EVAL_CONTEXT in *:file) sourced=1;; esac
+elif [ -n "$KSH_VERSION" ]; then
+  [ "$(cd -- "$(dirname -- "$0")" && pwd -P)/$(basename -- "$0")" != "$(cd -- "$(dirname -- "${.sh.file}")" && pwd -P)/$(basename -- "${.sh.file}")" ] && sourced=1
+elif [ -n "$BASH_VERSION" ]; then
+  (return 0 2>/dev/null) && sourced=1
+else # All other shells: examine $0 for known shell binary filenames.
+  # Detects `sh` and `dash`; add additional shell filenames as needed.
+  case ${0##*/} in sh|-sh|dash|-dash) sourced=1;; esac
+fi
+
+if [[ $sourced != 1 ]]; then
+   printf "\033[0;31mYOU SHOULD PROBABLY HAVE SOURCED THIS SCRIPT!\033[0m\n\n"
+   exit 1
+fi
+
+
+if [[ $# -eq 1 ]]; then
+  app=kinetic-web
+  url=https://staging.kinetic.openstax.org/
+  cookie_name=oxa_staging
+  env="staging"
+  if [[ $env == "production" ]]; then
+    url=https://kinetic.openstax.org/
+    app=kinetic-web-prod
+    cookie_name=oxa
+  fi
+  export TF_VAR_environment_name=$env
+  export TF_VAR_sso_cookie_name=$cookie_name
+  export TF_VAR_sso_cookie_private_key=$(heroku config:get COOKIE_PRIVATE_KEY --app $app)
+  export TF_VAR_sso_cookie_public_key=$(heroku config:get COOKIE_PUBLIC_KEY --app $app)
+  export TF_VAR_kinetic_url=$url
+else
+  echo "Usage: $0 <staging|production>" 1>&2;
+fi

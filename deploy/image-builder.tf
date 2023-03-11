@@ -90,21 +90,19 @@ resource "aws_imagebuilder_component" "kinetic_workspaces" {
         inputs = {
           commands = [
             "export DEBIAN_FRONTEND=noninteractive",
+            "sudo apt-get update",
+            "sudo apt-get install -y git build-essential binutils nginx-light certbot python3-certbot-dns-route53 ruby-aws-sdk-s3",
             "sudo wget --no-verbose -O /tmp/ssm.deb https://s3.${var.aws_region}.amazonaws.com/amazon-ssm-${var.aws_region}/latest/debian_amd64/amazon-ssm-agent.deb",
             "sudo dpkg -i /tmp/ssm.deb",
-            "sudo apt-get update",
-            "cd /tmp && git clone https://github.com/aws/efs-utils && cd /tmp/efs-utils",
-            "./build-deb.sh && sudo apt-get -y install ./build/amazon-efs-utils*deb",
+            "cd /tmp && git clone https://github.com/aws/efs-utils",
+            "cd /tmp/efs-utils && ./build-deb.sh && sudo apt-get -y install ./build/amazon-efs-utils*deb",
             "aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/install_r_and_pkgs /tmp/",
-            "sudo bash /tmp/install_r_and_pkgs",
+            "sudo bash /tmp/install_r_and_pkgs ${aws_s3_bucket.kinetic_workspaces_conf_files.id}",
             "echo ${random_id.rstudio_cookie_key.hex} > /var/lib/rstudio-server/secure-cookie-key",
-            "sudo apt-get install -y nfs-common nginx-light certbot python3-certbot-dns-route53 ruby-aws-sdk-s3",
             "aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/provision-letsencrypt /tmp/",
             "ruby /tmp/provision-letsencrypt ${var.subDomainName}.${var.baseDomainName} ${aws_s3_bucket.kinetic_workspaces_conf_files.id}",
             "sudo aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/nginx-proxy.conf /etc/nginx/sites-enabled/default",
             "sudo sudo apt-get clean",
-            "sudo addgroup --gid 1010 kinetic",
-            "sudo adduser --disabled-password --uid 1010 --gid 1010 --shell /bin/false --gecos 'Kinetic Workspace User' ${var.editor_login}",
           ]
         }
         name      = "download_and_install_kinetic_workspaces"
@@ -137,15 +135,15 @@ resource "aws_route_table_association" "kinetic_workspaces" {
   route_table_id = aws_route_table.kinetic_workspaces.id
 }
 
-resource "aws_instance" "kinetic_workspaces" {
-  ami                  = data.aws_ami.kinetic_workspaces.id
-  instance_type        = "t3.micro"
-  key_name             = aws_key_pair.kinetic_workspaces.key_name
-  iam_instance_profile = aws_iam_instance_profile.ec2_kinetic_workspaces.name
+# resource "aws_instance" "kinetic_workspaces" {
+#   ami                  = data.aws_ami.kinetic_workspaces.id
+#   instance_type        = "t3.micro"
+#   key_name             = aws_key_pair.kinetic_workspaces.key_name
+#   iam_instance_profile = aws_iam_instance_profile.ec2_kinetic_workspaces.name
 
-  subnet_id              = aws_subnet.kinetic_workspaces.id
-  vpc_security_group_ids = [aws_security_group.ec2_kinetic_workspaces.id]
-}
+#   subnet_id              = aws_subnet.kinetic_workspaces.id
+#   vpc_security_group_ids = [aws_security_group.ec2_kinetic_workspaces.id]
+# }
 
 
 output "workspaces_rstudio_ami_id" {
