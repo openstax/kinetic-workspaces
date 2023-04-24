@@ -17,6 +17,7 @@ resource "aws_s3_bucket_acl" "kinetic_workspaces_conf_files" {
   acl = "private"
 }
 
+
 resource "aws_s3_bucket_lifecycle_configuration" "kinetic_workspaces_conf_cached_files" {
   bucket = aws_s3_bucket.kinetic_workspaces_conf_files.id
   rule {

@@ -1,6 +1,6 @@
 import { Worker } from './data.js'
 import { assignHostDNS, getEc2Instance, terminateEc2Instance, startEc2Instance } from './aws.js'
-import { validateUserProfile } from './profile.js'
+import { validateUserProfile } from './provision.js'
 import type { Analysis } from '../definitions.js'
 
 export type EditorState = {

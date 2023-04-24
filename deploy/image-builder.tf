@@ -97,10 +97,10 @@ resource "aws_imagebuilder_component" "kinetic_workspaces" {
             "cd /tmp && git clone https://github.com/aws/efs-utils",
             "cd /tmp/efs-utils && ./build-deb.sh && sudo apt-get -y install ./build/amazon-efs-utils*deb",
             "aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/install_r_and_pkgs /tmp/",
-            "sudo bash /tmp/install_r_and_pkgs ${aws_s3_bucket.kinetic_workspaces_conf_files.id}",
+            "sudo bash /tmp/install_r_and_pkgs ${aws_s3_bucket.kinetic_workspaces_conf_files.id} ${local.domain_name}",
             "echo ${random_id.rstudio_cookie_key.hex} > /var/lib/rstudio-server/secure-cookie-key",
             "aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/provision-letsencrypt /tmp/",
-            "ruby /tmp/provision-letsencrypt ${var.subDomainName}.${var.baseDomainName} ${aws_s3_bucket.kinetic_workspaces_conf_files.id}",
+            "ruby /tmp/provision-letsencrypt ${local.domain_name} ${aws_s3_bucket.kinetic_workspaces_conf_files.id}",
             "sudo aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/nginx-proxy.conf /etc/nginx/sites-enabled/default",
             "sudo sudo apt-get clean",
           ]

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -e
+
+DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+ID=$1
+
+export IP=`${DIR}/ip-of-editor-instance $ID`
+
+$DIR/ssh-to-host $ID -f 'sudo tar czf /tmp/editor-home-directory.tar.gz -C /home/kinetic/ .'
+
+export SCP=true
+
+$DIR/ssh-to-host $ID /tmp/editor-home-directory.tar.gz /tmp

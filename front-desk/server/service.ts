@@ -6,7 +6,7 @@ import { Analysis, DocumentStatus, MAX_INACTIVY_TIME, POLLING_RATE } from '../de
 import type { ConfigModel, WorkerModel } from './data.js'
 import { startEc2Instance, getEc2Instance, assignHostDNS } from './aws.js'
 import { reapWorker } from './cleanup.js'
-import { validateUserProfile } from './profile.js'
+import { validateUserProfile } from './provision.js'
 
 type EditorServiceArgs = {
     analysisId: number

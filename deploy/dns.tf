@@ -4,7 +4,7 @@ data "aws_route53_zone" "kinetic" {
 }
 
 resource "aws_route53_zone" "kinetic_workspaces" {
-  name = "${var.subDomainName}.${var.baseDomainName}"
+  name = local.domain_name
 }
 
 resource "aws_route53_record" "kinetic_workspaces_ns" {
@@ -16,8 +16,8 @@ resource "aws_route53_record" "kinetic_workspaces_ns" {
 }
 
 resource "aws_acm_certificate" "kinetic_workspaces" {
-  domain_name               = "${var.subDomainName}.${var.baseDomainName}"
-  subject_alternative_names = ["*.${var.subDomainName}.${var.baseDomainName}"]
+  domain_name               = local.domain_name
+  subject_alternative_names = ["*.${local.domain_name}"]
   validation_method         = "DNS"
   lifecycle {
     create_before_destroy = true
@@ -39,13 +39,13 @@ resource "aws_acm_certificate_validation" "kinetic_workspaces" {
 }
 
 resource "aws_route53_record" "kinetic_workspaces" {
-  name    = "${var.subDomainName}.${var.baseDomainName}"
+  name    = local.domain_name
   type    = "A"
   zone_id = aws_route53_zone.kinetic_workspaces.id
 
   alias {
-    name    = aws_cloudfront_distribution.kinetic_workspaces.domain_name
-    zone_id = aws_cloudfront_distribution.kinetic_workspaces.hosted_zone_id
+    name                   = aws_cloudfront_distribution.kinetic_workspaces.domain_name
+    zone_id                = aws_cloudfront_distribution.kinetic_workspaces.hosted_zone_id
     evaluate_target_health = true
 
     # name                   = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].target_domain_name
@@ -54,13 +54,13 @@ resource "aws_route53_record" "kinetic_workspaces" {
 }
 
 resource "aws_route53_record" "kinetic_workspaces_wildcard" {
-  name    = "*.${var.subDomainName}.${var.baseDomainName}"
+  name    = "*.${local.domain_name}"
   type    = "A"
   zone_id = data.aws_route53_zone.kinetic.zone_id
 
   alias {
-    name    = aws_cloudfront_distribution.kinetic_workspaces.domain_name
-    zone_id = aws_cloudfront_distribution.kinetic_workspaces.hosted_zone_id
+    name                   = aws_cloudfront_distribution.kinetic_workspaces.domain_name
+    zone_id                = aws_cloudfront_distribution.kinetic_workspaces.hosted_zone_id
     evaluate_target_health = true
 
     # name                   = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].target_domain_name

@@ -61,6 +61,23 @@ resource "aws_s3_bucket_policy" "kinetic_ws_assets" {
 EOF
 }
 
+resource "aws_s3_object" "kinetic_ws_rstudio_patch" {
+  bucket = aws_s3_bucket.kinetic_ws_assets.id
+
+  key    = "assets/kinetic-rstudio-editor-patch.js"
+  source = "assets/kinetic-rstudio-editor-patch.js"
+
+  etag = filemd5("assets/kinetic-rstudio-editor-patch.js")
+}
+
+# resource "aws_s3_object" "kinetic_workspaces_assets_files" {
+#   for_each    = fileset(local.config_path, "*")
+#   bucket      = aws_s3_bucket.kinetic_workspaces_conf_files.id
+#   key         = "/configs/${each.value}"
+#   source      = "${local.config_path}/${each.value}"
+#   source_hash = filemd5("${local.config_path}/${each.value}")
+# }
+
 
 // Cloudfront Distribution
 resource "aws_cloudfront_distribution" "kinetic_workspaces" {
@@ -107,8 +124,7 @@ resource "aws_cloudfront_distribution" "kinetic_workspaces" {
   }
 
   aliases = [
-    "${var.subDomainName}.${var.baseDomainName}",
-    "*.${var.subDomainName}.${var.baseDomainName}",
+    local.domain_name, "*.${local.domain_name}",
   ]
 
   default_cache_behavior {
@@ -117,7 +133,8 @@ resource "aws_cloudfront_distribution" "kinetic_workspaces" {
 
     target_origin_id = local.assets_s3_origin_id
 
-    cache_policy_id = aws_cloudfront_cache_policy.kinetic_ws_assets.id
+    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimized
+    # aws_cloudfront_cache_policy.kinetic_ws_assets.id
 
     viewer_protocol_policy = "redirect-to-https"
   }
@@ -178,28 +195,4 @@ resource "aws_cloudfront_distribution" "kinetic_workspaces" {
   }
 
 }
-
-resource "aws_cloudfront_cache_policy" "kinetic_ws_assets" {
-  name = "kinetic-ws-assets"
-
-  default_ttl = 604800 # week
-  max_ttl     = 604800
-  min_ttl     = 604800
-
-  parameters_in_cache_key_and_forwarded_to_origin {
-    enable_accept_encoding_brotli = true
-    enable_accept_encoding_gzip   = true
-    cookies_config {
-      cookie_behavior = "none"
-    }
-    headers_config {
-      header_behavior = "none"
-    }
-    query_strings_config {
-      query_string_behavior = "none"
-    }
-  }
-
-}
-
 

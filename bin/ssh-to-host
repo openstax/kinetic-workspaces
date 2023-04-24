@@ -1,12 +1,14 @@
 #!/bin/bash
 
 #set -x
+#
+DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 ID=$1
 
-[[ -z $IP ]] && IP=`./ip-of-editor-instance $ID`
+[[ -z $IP ]] && IP=`${DIR}/ip-of-editor-instance $ID`
 
-OPTS="-o UserKnownHostsFile=/dev/null -o CheckHostIP=no -o LogLevel=ERROR -o StrictHostKeyChecking=no -i ../tmp/key.pem"
+OPTS="-o UserKnownHostsFile=/dev/null -o CheckHostIP=no -o LogLevel=ERROR -o StrictHostKeyChecking=no -i ${DIR}/../tmp/key.pem"
 
 if [[ -n $SCP ]]; then
   scp $OPTS admin@$IP:"${@:2}"

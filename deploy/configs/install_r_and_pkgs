@@ -8,10 +8,14 @@
 set -ex
 
 BUCKET=$1
+DOMAIN=$2
 
 NCPUS=`nproc --all`
 
-echo building using $NCPUS cpu count
+echo building using $NCPUS cpu count.
+echo using files from $BUCKET
+echo domain is $DOMAIN
+
 
 # a function to install apt packages only if they are not installed
 function apt_install() {
@@ -44,6 +48,7 @@ www-frame-origin=any
 www-port=80
 EOF
 
+perl -p -i -e "s|</head>|<script src=\"https://${DOMAIN}/assets/kinetic-rstudio-editor-patch.js\"></script>\n</head>|" /usr/lib/rstudio-server/www/index.htm
 
 apt_install \
     ca-certificates \
@@ -84,6 +89,7 @@ apt_install \
 ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r
 
 install2.r --error --skipinstalled -n "$NCPUS" \
+    janitor \
     tidyverse \
     devtools \
     rmarkdown \
@@ -100,6 +106,7 @@ install2.r --error --skipinstalled -n "$NCPUS" \
     psych \
     careless \
     RSQLite \
+    renv \
     devtools
 
 # dbplyr \
@@ -114,19 +121,17 @@ install2.r --error --skipinstalled -n "$NCPUS" \
 ## a bridge to far? -- brings in another 60 packages
 # install2.r --error --skipinstalled -n "$NCPUS" tidymodels
 
-# Clean up
-## Strip binary installed lybraries from RSPM
-## https://github.com/rocker-org/rocker-versioned2/issues/340
-strip /usr/local/lib/R/site-library/*/libs/*.so
-
 # Check the tidyverse core packages' version
 echo -e "Check the tidyverse package...\n"
 R -q -e "library(tidyverse)"
 echo -e "\nInstall tidyverse package, done!"
 
-cd /tmp
-aws s3 cp s3://$BUCKET/configs/kinetic-r-api.tar.gz ./
-tar zxf kinetic-r-api.tar.gz
-sudo R -e "devtools::install('kinetic')"
+aws s3 cp s3://$BUCKET/configs/kinetic-r-api.tar.gz /tmp/kinetic-r-api.tar.gz
+sudo R -e 'install.packages("/tmp/kinetic-r-api.tar.gz", repos = NULL, type = "source")'
+
+# Clean up
+## Strip binary installed lybraries from RSPM
+## https://github.com/rocker-org/rocker-versioned2/issues/340
+strip /usr/local/lib/R/site-library/*/libs/*.so
 
 echo -e "\nInstall kinetic package, done!"
