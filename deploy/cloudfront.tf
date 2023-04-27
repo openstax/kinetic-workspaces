@@ -133,8 +133,8 @@ resource "aws_cloudfront_distribution" "kinetic_workspaces" {
 
     target_origin_id = local.assets_s3_origin_id
 
-    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimized
-    # aws_cloudfront_cache_policy.kinetic_ws_assets.id
+    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # no-cache
+    #  "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimized
 
     viewer_protocol_policy = "redirect-to-https"
   }

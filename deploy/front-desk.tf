@@ -25,6 +25,9 @@ resource "aws_s3_object" "kinetic_ws_front_desk_lambda" {
 
   key    = "front-desk.zip"
   source = local.front_desk_archive
+  tags = {
+    Name = "Kinetic Workspaces Front Desk"
+  }
   #  data.archive_file.kinetic_ws_front_desk.output_path
 
   etag = filemd5(local.front_desk_archive)

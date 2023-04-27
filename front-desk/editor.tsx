@@ -6,6 +6,7 @@ import {
 } from '@nathanstitt/sundry'
 import type { EditorState } from './definitions.js'
 import { isRPCError, updateWorkspaceStatus } from './rpc.js'
+import { RStudioIframe } from './rstudio-iframe.js'
 
 
 export const DatePicker: React.FC<{ yyyy_mm_hh: string, onChange: (yyyy_mm_hh: string) => void }> = ({ yyyy_mm_hh, onChange }) => {
@@ -21,15 +22,10 @@ export function Editor() {
 
     const visibilityState = useDocumentVisibilityState()
 
-    // React.useEffect(() => {
-    //     window.addEventListener("beforeunload", function (e) {
-    //                  updateWorkspaceStatus({ analysisId, documentStatus: 'closed' })
-    //         return 'useuse?'
-    //     });
-    // }, [])
+
     const obu = React.useCallback(() => {
-        updateWorkspaceStatus({ analysisId, documentStatus: 'closed' })
-        return 'use'
+    //    updateWorkspaceStatus({ analysisId, documentStatus: 'closed' })
+
     }, [])
 
     useEventListener('beforeunload', obu, { target: window })
@@ -56,9 +52,7 @@ export function Editor() {
 
 
     return (
-        <div style={{ width: '100vw', height: '100vh' }}>
-            <iframe style={{ border: 0, width: '100vw', height: '100vh' }} src={`https://${editor?.hostName}/`} />
-        </div>
+        <RStudioIframe url={`https://${editor?.hostName}/`} />
     )
 }
 

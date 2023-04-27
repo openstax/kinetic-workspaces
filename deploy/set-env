@@ -21,17 +21,21 @@ if [[ $# -eq 1 ]]; then
   app=kinetic-web
   url=https://staging.kinetic.openstax.org/
   cookie_name=oxa_staging
-  env="staging"
+  # set env to first argument
+  # if env is production, set url and app
+  env=$1
   if [[ $env == "production" ]]; then
     url=https://kinetic.openstax.org/
     app=kinetic-web-prod
     cookie_name=oxa
+    export TF_VAR_base_domain_name=kinetic.openstax.org
   fi
+  export TF_VAR_base_domain_name=$env.kinetic.openstax.org
   export TF_VAR_environment_name=$env
   export TF_VAR_sso_cookie_name=$cookie_name
   export TF_VAR_sso_cookie_private_key=$(heroku config:get COOKIE_PRIVATE_KEY --app $app)
   export TF_VAR_sso_cookie_public_key=$(heroku config:get COOKIE_PUBLIC_KEY --app $app)
   export TF_VAR_kinetic_url=$url
 else
-  echo "Usage: $0 <staging|production>" 1>&2;
+  echo "Usage: $0 <dev|staging|production>" 1>&2;
 fi
