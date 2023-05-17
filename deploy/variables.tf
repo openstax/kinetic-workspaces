@@ -1,8 +1,8 @@
 variable "aws_region" {
-     default = "us-east-1"
+  default = "us-east-1"
 }
 variable "availabilityZone" {
-     default = "us-east-1a"
+  default = "us-east-1a"
 }
 # variable "instanceTenancy" {
 #     default = "default"
@@ -34,7 +34,7 @@ variable "availabilityZone" {
 #     default = [ "0.0.0.0/0" ]
 # }
 variable "mapPublicIP" {
-    default = true
+  default = true
 }
 variable "wsAssetsSubDomainName" {
   default = "assets"
@@ -48,29 +48,32 @@ variable "subDomainName" {
 
 variable "sso_cookie_name" {
   description = "The name of the OpenStax session cookie"
-  sensitive = true
+  sensitive   = true
 }
 
 variable "sso_cookie_private_key" {
   description = "Private key used to decode OpenStax session cookie"
-  sensitive = true
+  sensitive   = true
 }
 
 variable "sso_cookie_public_key" {
   description = "Public key used to decode OpenStax session cookie"
-  sensitive = true
+  sensitive   = true
 }
 
 variable "environment_name" {
   description = "Name of environment"
-  default = "staging"
+  default     = "staging"
 }
 
 variable "editor_login" {
-  default = "kinetic"
+  default     = "kinetic"
   description = "Username of user on editor instances"
 }
 
 variable "kinetic_url" {
   description = "URL to the main kinetic app"
+}
+variable "email_address_notification" {
+  default = "nathan.stitt@rice.edu"
 }

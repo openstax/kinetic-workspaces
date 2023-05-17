@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+
+require 'docker'
+
+
+Docker.pull
+# // public.ecr.aws/debian/debian:unstable-20230411-slim
+
+Docker::Image.build("from base\nrun touch /test")
+
+p Docker.info

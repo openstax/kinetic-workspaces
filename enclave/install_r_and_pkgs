@@ -1,0 +1,124 @@
+#!/bin/bash
+
+
+# COPIED FROM https://github.com/eitsupi/rocker-versioned2/blob/master/scripts/install_tidyverse.sh
+# removed duckdb and arrow due to compilation errors
+# added several other packages
+
+set -ex
+
+BUCKET=$1
+
+NCPUS=`nproc --all`
+
+echo building using $NCPUS cpu count.
+echo using files from $BUCKET
+
+aws s3 cp s3://$BUCKET/configs/kinetic-r-api.tar.gz /tmp/kinetic-r-api.tar.gz
+
+# a function to install apt packages only if they are not installed
+function apt_install() {
+    if ! dpkg -s "$@" >/dev/null 2>&1; then
+        if [ "$(find /var/lib/apt/lists/* | wc -l)" = "0" ]; then
+            apt-get update
+        fi
+        apt-get install -y --no-install-recommends "$@"
+    fi
+}
+
+apt-get install -y gnupg
+
+apt-key adv --keyserver keyserver.ubuntu.com --recv-key '95C0FAF38DB3CCAD0C080A7BDC78B2DDEABC47B7'
+echo "deb http://cloud.r-project.org/bin/linux/debian bullseye-cran40/" > /etc/apt/sources.list.d/r.list
+
+apt-get update
+
+apt-get -y upgrade
+
+apt_install \
+    libatlas3-base \
+    r-base-core \
+    gfortran \
+    ca-certificates \
+    lsb-release \
+    file \
+    libapparmor1 \
+    libclang-dev \
+    libcurl4-openssl-dev \
+    libedit2 \
+    libobjc4 \
+    libssl-dev \
+    libpq5 \
+    psmisc \
+    procps \
+    python-setuptools \
+    pwgen \
+    libxml2-dev \
+    libcairo2-dev \
+    libgit2-dev \
+    default-libmysqlclient-dev \
+    libpq-dev \
+    libsasl2-dev \
+    libsqlite3-dev \
+    libssh2-1-dev \
+    libxtst6 \
+    libcurl4-openssl-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libfreetype6-dev \
+    libpng-dev \
+    libtiff5-dev \
+    libjpeg-dev \
+    unixodbc-dev \
+    libgdal-dev \
+    r-cran-docopt \
+    r-cran-littler
+
+ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r
+
+install2.r --error --skipinstalled -n "$NCPUS" \
+    janitor \
+    tidyverse \
+    devtools \
+    rmarkdown \
+    BiocManager \
+    vroom \
+    gert \
+    jsonlite \
+    rvest \
+    qualtRics \
+    kableExtra \
+    shiny \
+    leaflet \
+    plotly \
+    psych \
+    careless \
+    RSQLite \
+    renv \
+    devtools
+
+# dbplyr \
+#     DBI \
+#     dtplyr \
+#     devtools \
+#     nycflights13 \
+#     Lahman \
+#     RSQLite \
+#     fst
+
+## a bridge to far? -- brings in another 60 packages
+# install2.r --error --skipinstalled -n "$NCPUS" tidymodels
+
+# Check the tidyverse core packages' version
+echo -e "Check the tidyverse package...\n"
+R -q -e "library(tidyverse)"
+echo -e "\nInstall tidyverse package, done!"
+
+sudo R -e 'install.packages("/tmp/kinetic-r-api.tar.gz", repos = NULL, type = "source")'
+
+# Clean up
+## Strip binary installed lybraries from RSPM
+## https://github.com/rocker-org/rocker-versioned2/issues/340
+strip /usr/local/lib/R/site-library/*/libs/*.so
+
+echo -e "\nInstall kinetic package, done!"

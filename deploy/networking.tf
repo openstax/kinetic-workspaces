@@ -16,6 +16,21 @@ resource "aws_subnet" "kinetic_workspaces" {
   }
 }
 
+# resource "aws_default_route_table" "kinetic_workspaces" {
+#   default_route_table_id = aws_vpc.kinetic_workspaces.default_route_table_id
+
+#   route = []
+
+#   tags = {
+#     Name = "example"
+#   }
+# }
+
+
+# resource "aws_main_route_table_association" "kinetic_workspaces" {
+#   vpc_id         = aws_vpc.kinetic_workspaces.id
+#   route_table_id = aws_route_table.kinetic_workspaces.id
+# }
 
 # resource "aws_eip" "kinetic_workspaces" {
 #   instance = aws_instance.kinetic_workspaces.id
@@ -51,4 +66,8 @@ output "workspaces_subnet_id" {
   value = aws_subnet.kinetic_workspaces.id
 }
 
-
+resource "aws_vpc_endpoint" "kinetic_workspaces_s3" {
+  vpc_id            = aws_vpc.kinetic_workspaces.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+}

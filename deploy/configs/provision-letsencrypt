@@ -30,6 +30,7 @@ def download
   S3.get_object(bucket: BUCKET, key: BACKUP, response_target: TGZ)
   puts 'using previously generated letsencrypt files'
   run("sudo tar -zxf #{TGZ} -C /etc")
+  run("sudo certbot renew")
   true
 rescue Aws::S3::Errors::NoSuchBucket, Aws::S3::Errors::NoSuchKey
   false

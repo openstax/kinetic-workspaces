@@ -33,8 +33,8 @@ resource "aws_security_group" "ec2_kinetic_workspaces" {
       "0.0.0.0/0"
     ]
     from_port = 22
-    to_port = 22
-    protocol = "tcp"
+    to_port   = 22
+    protocol  = "tcp"
   }
 }
 
@@ -55,7 +55,6 @@ resource "aws_iam_role" "ec2_kinetic_workspaces" {
       }
     }]
   })
-
 }
 
 
@@ -118,7 +117,6 @@ resource "aws_iam_instance_profile" "ec2_kinetic_workspaces" {
 
 resource "aws_iam_role_policy_attachment" "role-policy-attachment" {
   for_each = toset([
-
     "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder",
     "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds",
     "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"

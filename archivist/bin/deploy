@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+
+set -ex
+
+LAMBDA=KineticWorkspacesArchivist
+LAMBDA_BUCKET=kinetic-workspaces-lambdas
+
+export AWS_PAGER="" # silence cli using "less" to display output
+
+cd lambda
+
+GOARCH=amd64 GOOS=linux go build -o ../build/archivist
+
+cd ../build
+
+zip archivist.zip archivist
+
+aws s3 cp archivist.zip s3://kinetic-workspaces-lambdas/archivist.zip
+
+aws lambda update-function-code --function-name $LAMBDA --s3-bucket $LAMBDA_BUCKET --s3-key archivist.zip
+
+sleep 5
+
+aws lambda publish-version --function-name $LAMBDA
+

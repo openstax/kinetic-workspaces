@@ -21,7 +21,7 @@ locals {
 # }
 
 resource "aws_s3_object" "kinetic_ws_front_desk_lambda" {
-  bucket = aws_s3_bucket.kinetic_ws_front_desk_lambda.id
+  bucket = aws_s3_bucket.kinetic_ws_lambda.id
 
   key    = "front-desk.zip"
   source = local.front_desk_archive
@@ -33,14 +33,14 @@ resource "aws_s3_object" "kinetic_ws_front_desk_lambda" {
   etag = filemd5(local.front_desk_archive)
 }
 
-resource "aws_s3_bucket" "kinetic_ws_front_desk_lambda" {
+resource "aws_s3_bucket" "kinetic_ws_lambda" {
   bucket = "kinetic-workspaces-lambdas"
 }
 
-resource "aws_s3_bucket_acl" "kinetic_lambda" {
-  bucket = aws_s3_bucket.kinetic_ws_front_desk_lambda.id
-  acl    = "private"
-}
+# resource "aws_s3_bucket_acl" "kinetic_lambda" {
+#   bucket = aws_s3_bucket.kinetic_ws_lambda.id
+#   acl    = "private"
+# }
 
 resource "aws_apigatewayv2_api" "kinetic_ws_front_desk" {
   name          = "kinetic-ws-front-desk"
@@ -77,7 +77,7 @@ resource "aws_apigatewayv2_stage" "kinetic_ws_front_desk" {
 resource "aws_lambda_function" "kinetic_ws_front_desk" {
   function_name = "KineticWorkspacesFrontDesk"
 
-  s3_bucket = aws_s3_bucket.kinetic_ws_front_desk_lambda.id
+  s3_bucket = aws_s3_bucket.kinetic_ws_lambda.id
   s3_key    = aws_s3_object.kinetic_ws_front_desk_lambda.key
 
   timeout = 120
@@ -294,38 +294,6 @@ resource "aws_iam_role_policy_attachment" "lambda_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-
-
-
-# {
-#       Sid = "FunctionURLAllowPublicAccess",
-#      Effect = "Allow",
-#      Principal = "*",
-#      Action = "lambda:InvokeFunctionUrl",
-#      Resource = aws_iam_role.kinetic_ws_front_desk.arn
-#      Condition = {
-#        StringEquals = {
-#          "lambda:FunctionUrlAuthType" = "NONE"
-#        }
-#      }
-#    }
-
-# resource "aws_apigatewayv2_integration" "kinetic_ws_front_desk" {
-#   api_id = aws_apigatewayv2_api.kinetic_ws_front_desk.id
-
-#   integration_uri    = aws_lambda_function.kinetic_ws_front_desk.invoke_arn
-#   integration_type   = "AWS_PROXY"
-#   integration_method = "POST"
-# }
-
-
-
-# resource "aws_apigatewayv2_route" "kinetic_ws_front_desk" {
-#   api_id = aws_apigatewayv2_api.kinetic_ws_front_desk.id
-
-#   route_key = "$default"
-#   target    = "integrations/${aws_apigatewayv2_integration.kinetic_ws_front_desk.id}"
-# }
 
 resource "aws_cloudwatch_log_group" "kinetic_ws_front_desk_api_gw" {
   name = "/aws/api_gw/${aws_apigatewayv2_api.kinetic_ws_front_desk.name}"
