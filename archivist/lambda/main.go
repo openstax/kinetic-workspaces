@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	//"os"
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -34,9 +33,9 @@ func HandleRequest(ctx context.Context, evt Event) (string, error) {
 
 	fmt.Println(listDirectoryContents(evt.Directory))
 
-	opts := archiver.FromDiskOptions{FollowSymlinks: false}
+	opts := archiver.FromDiskOptions{FollowSymlinks: false, ClearAttributes: true}
 	files, err := archiver.FilesFromDisk(&opts, map[string]string{
-		evt.Directory: fmt.Sprintf("workspaces-archive/%d", evt.AnalysisID),
+		evt.Directory: "", // fmt.Sprintf("workspaces-archive/%d", evt.AnalysisID),
 	})
 
 	//	fmt.Printf("files: %v\n", files)

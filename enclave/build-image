@@ -1,11 +1,57 @@
 #!/usr/bin/env ruby
 
 require 'docker'
+require 'aws-sdk-s3'
+require 'pathname'
 
+path = 'review/1/2023-05-17T10:12:35-05:00.zst'
 
-Docker.pull
-# // public.ecr.aws/debian/debian:unstable-20230411-slim
+cache_name = path.gsub('/', '-')
 
-Docker::Image.build("from base\nrun touch /test")
+s3 = Aws::S3::Client.new(region: 'us-east-1')
 
-p Docker.info
+cached = Pathname.new("cache/#{cache_name}")
+
+unless cached.exist?
+  puts 'not cached, downloading'
+  s3.get_object(
+    key: path,
+    bucket: 'kinetic-workspaces-archive',
+    response_target: cached.to_s,
+  )
+  output = `tar zxf cache/#{cache_name} -C tmp`
+  raise RuntimeError.new(output) unless $? == 0
+end
+
+dir = Dir.getwd
+
+container = Docker::Container.create(
+  'Image' => '77485b1c7fd1',
+  'WorkingDir' => '/mnt',
+  'Cmd' => %w[R main.r],
+  'HostConfig' => {
+    'Binds' => [
+      "#{dir}/source:/mnt:ro"
+    ]
+  }
+)
+
+p container
+
+container.tap(&:start).attach do |stream, chunk|
+  puts "#{stream}: #{chunk}"
+end
+
+#puts cmd
+
+# container.start
+
+# container.stop
+
+# Docker.pull
+
+# # // public.ecr.aws/debian/debian:unstable-20230411-slim
+
+# Docker::Image.build("from base\nrun touch /test")
+
+# p Docker.info

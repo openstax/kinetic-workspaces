@@ -150,7 +150,7 @@ export const getProfileUrl = async () => {
         new S3Client({ region: config.awsRegion }),
         new GetObjectCommand({
             Bucket: config.s3ConfigBucket,
-            Key: 'configs/editor-home-directory.tar.gz',
+            Key: 'provision/editor-home-directory.tar.gz',
         }),
         { expiresIn: 3600 }
     );

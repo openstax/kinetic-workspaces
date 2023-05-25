@@ -12,8 +12,6 @@ BUCKET=$1
 NCPUS=`nproc --all`
 
 echo building using $NCPUS cpu count.
-echo using files from $BUCKET
-
 
 # a function to install apt packages only if they are not installed
 function apt_install() {
@@ -29,14 +27,17 @@ apt-get install -y gnupg
 
 apt-key adv --keyserver keyserver.ubuntu.com --recv-key '95C0FAF38DB3CCAD0C080A7BDC78B2DDEABC47B7'
 echo "deb http://cloud.r-project.org/bin/linux/debian bullseye-cran40/" > /etc/apt/sources.list.d/r.list
+
 apt-get update
-apt-get install -y \
-    libatlas3-base \
-    r-base r-base-core r-base-dev
 
 apt-get -y upgrade
 
 apt_install \
+    build-essential \
+    binutils \
+    libatlas3-base \
+    r-base-core \
+    gfortran \
     ca-certificates \
     lsb-release \
     file \
@@ -112,8 +113,8 @@ echo -e "Check the tidyverse package...\n"
 R -q -e "library(tidyverse)"
 echo -e "\nInstall tidyverse package, done!"
 
-aws s3 cp s3://$BUCKET/configs/kinetic-r-api.tar.gz /tmp/kinetic-r-api.tar.gz
-sudo R -e 'install.packages("/tmp/kinetic-r-api.tar.gz", repos = NULL, type = "source")'
+## file should have been placed there by aws_imagebuilder_component.kinetic_workspaces_config_files
+R -e 'install.packages("/tmp/kinetic-r-api.tar.gz", repos = NULL, type = "source")'
 
 # Clean up
 ## Strip binary installed lybraries from RSPM

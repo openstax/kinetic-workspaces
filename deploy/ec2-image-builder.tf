@@ -48,8 +48,22 @@ resource "aws_imagebuilder_image_pipeline" "kinetic_workspaces" {
 
 resource "aws_imagebuilder_image_recipe" "kinetic_workspaces" {
   component {
-    component_arn = aws_imagebuilder_component.kinetic_workspaces.arn
+    component_arn = aws_imagebuilder_component.kinetic_workspaces_config_files.arn
   }
+
+  component {
+    component_arn = "arn:aws:imagebuilder:${var.aws_region}:aws:component/update-linux/x.x.x"
+  }
+
+
+  component {
+    component_arn = aws_imagebuilder_component.kinetic_workspaces_install_r_and_pkgs.arn
+  }
+
+  component {
+    component_arn = aws_imagebuilder_component.ec2_kinetic_workspaces.arn
+  }
+
 
   name         = "kinetic_workspaces_image"
   parent_image = data.aws_ami.kinetic_workspaces_parent_image.id
@@ -68,52 +82,6 @@ resource "aws_imagebuilder_distribution_configuration" "kinetic_workspaces" {
   }
 }
 
-resource "aws_imagebuilder_component" "kinetic_workspaces" {
-  name     = "deploy_kinetic_workspaces"
-  platform = "Linux"
-  version  = "1.0.0"
-
-  # this does not force replacement when the file changes, it only tells terraform to wait
-  # until their uploaded before running this step. To force regeneration run:
-  # terraform apply -replace=aws_imagebuilder_component.kinetic_workspaces
-  depends_on = [
-    aws_s3_object.kinetic_workspaces_conf_files["nginx-proxy.conf"],
-    aws_s3_object.kinetic_workspaces_conf_files["provision-letsencrypt"],
-  ]
-
-  # ExecuteBash https://docs.aws.amazon.com/imagebuilder/latest/userguide/toe-action-modules.html#action-modules-executebash
-  data = yamlencode({
-    schemaVersion = 1.0
-    phases = [{
-      name = "build"
-      steps = [{
-        action    = "ExecuteBash"
-        name      = "download_and_install_kinetic_workspaces"
-        onFailure = "Abort"
-        inputs = {
-          commands = [
-            "export DEBIAN_FRONTEND=noninteractive",
-            "sudo apt-get update",
-            "sudo apt-get install -y git gdebi-core ruby-full build-essential binutils nginx-light certbot python3-certbot-dns-route53",
-            "sudo gem install aws-sdk-s3",
-            "sudo wget --no-verbose -O /tmp/ssm.deb https://s3.${var.aws_region}.amazonaws.com/amazon-ssm-${var.aws_region}/latest/debian_amd64/amazon-ssm-agent.deb",
-            "sudo dpkg -i /tmp/ssm.deb",
-            "cd /tmp && git clone https://github.com/aws/efs-utils",
-            "cd /tmp/efs-utils && ./build-deb.sh && sudo apt-get -y install ./build/amazon-efs-utils*deb",
-            "aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/install_rstudio /tmp/",
-            "sudo bash /tmp/install_rstudio ${aws_s3_bucket.kinetic_workspaces_conf_files.id} ${local.domain_name}  ${random_id.rstudio_cookie_key.hex}",
-            "aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/install_r_and_pkgs /tmp/",
-            "sudo bash /tmp/install_r_and_pkgs ${aws_s3_bucket.kinetic_workspaces_conf_files.id}",
-            "aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/provision-letsencrypt /tmp/",
-            "ruby /tmp/provision-letsencrypt ${local.domain_name} ${aws_s3_bucket.kinetic_workspaces_conf_files.id}",
-            "sudo aws s3 cp s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/nginx-proxy.conf /etc/nginx/sites-enabled/default",
-            "sudo sudo apt-get clean",
-          ]
-        }
-      }]
-    }]
-  })
-}
 
 resource "aws_imagebuilder_image" "kinetic_workspaces" {
   image_recipe_arn                 = aws_imagebuilder_image_recipe.kinetic_workspaces.arn
@@ -125,7 +93,7 @@ resource "aws_imagebuilder_infrastructure_configuration" "kinetic_workspaces" {
   name                          = "kinetic_workspaces_infrastructure_configuration"
   description                   = "AWS image builder config for EC2 with Kinetic_Workspaces hosted"
   instance_profile_name         = aws_iam_instance_profile.ec2_kinetic_workspaces.name
-  instance_types                = ["t3.2xlarge"] # using a 2xlarge to speed up builds
+  instance_types                = ["t3.large"] # using a 2xlarge to speed up builds
   security_group_ids            = [aws_security_group.ec2_kinetic_workspaces.id]
   subnet_id                     = aws_subnet.kinetic_workspaces.id
   terminate_instance_on_failure = true
