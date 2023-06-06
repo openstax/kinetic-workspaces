@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
-
 	"context"
+	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"io"
 	"io/ioutil"
@@ -70,7 +70,7 @@ func HandleRequest(ctx context.Context, evt Event) (string, error) {
 		return "", fmt.Errorf("failed to uploadResult fileToUpload, %v", err)
 	}
 
-	return fmt.Sprintf("%s uploaded to, %s\n", evt.Directory, result.Location), nil
+	return json.Marshal(result), nil
 }
 
 func listDirectoryContents(directoryPath string) string {
