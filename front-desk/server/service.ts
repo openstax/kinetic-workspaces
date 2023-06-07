@@ -107,7 +107,7 @@ export class EditorService {
         console.log(worker)
 
         const host = await getEc2Instance(worker.instanceId)
-        const hostState = host.State?.Name || 'unknown'
+        const hostState = host?.State?.Name || 'unknown'
 
         if (hostState == 'terminated') {
             await this.startEc2Instance()

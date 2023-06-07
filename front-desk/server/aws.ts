@@ -26,7 +26,7 @@ export const getEc2Instance = async (instanceId: string) => {
             InstanceIds: [instanceId],
         })
     )
-    const host = response.Reservations?.[0].Instances?.[0]
+    const host = response.Reservations?.[0]?.Instances?.[0]
     if (!host) throw new Error('Failed to find ec2 instance')
     return host
 }
