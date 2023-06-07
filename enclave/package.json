@@ -1,0 +1,16 @@
+{
+  "name": "kinetic-enclave",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Nathan Stitt",
+  "license": "AGPL",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-ec2": "^3.346.0",
+    "@types/aws-lambda": "^8.10.116",
+    "@types/node": "^20.2.5",
+    "aws-lambda": "^1.0.7",
+    "esbuild": "^0.17.19",
+    "typescript": "^5.1.3"
+  }
+}

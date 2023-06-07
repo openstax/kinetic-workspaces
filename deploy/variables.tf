@@ -77,3 +77,4 @@ variable "kinetic_url" {
 variable "email_address_notification" {
   default = "nathan.stitt@rice.edu"
 }
+

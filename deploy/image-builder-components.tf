@@ -50,15 +50,36 @@ resource "aws_imagebuilder_component" "kinetic_workspaces_config_files" {
   })
 }
 
+resource "aws_imagebuilder_component" "ec2_kinetic_enclave" {
+  name     = "configure_ec2_kinetic_enclave"
+  platform = "Linux"
+  version  = "1.0.0"
+
+  data = yamlencode({
+    schemaVersion = 1.0
+    phases = [{
+      name = "build"
+      steps = [{
+        action    = "ExecuteBash"
+        name      = "download_and_install_kinetic_workspaces"
+        onFailure = "Abort"
+        inputs = {
+          commands = [
+            "export DEBIAN_FRONTEND=noninteractive",
+            "sudo apt-get update",
+            "sudo apt-get install -y ruby-full",
+          ]
+        }
+      }]
+    }]
+  })
+}
 
 resource "aws_imagebuilder_component" "ec2_kinetic_workspaces" {
   name     = "configure_ec2_kinetic_workspaces"
   platform = "Linux"
   version  = "1.0.0"
 
-  # this does not force replacement when the file changes, it only tells terraform to wait
-  # until their uploaded before running this step. To force regeneration run:
-  # terraform apply -replace=aws_imagebuilder_component.kinetic_workspaces
   depends_on = [
     aws_s3_object.kinetic_workspaces_conf_files["nginx-proxy.conf"],
     aws_s3_object.kinetic_workspaces_conf_files["provision-letsencrypt"],

@@ -1,30 +1,33 @@
-locals {
-  archivist_archive = "${path.module}/../archivist/build/archivist.zip"
-}
+# locals {
+#   archivist_archive = "${path.module}/../archivist/build/archivist.zip"
+# }
 
-resource "aws_s3_object" "kinetic_archivist_lambda" {
-  bucket = aws_s3_bucket.kinetic_ws_lambda.id
+# resource "aws_s3_object" "kinetic_archivist_lambda" {
+#   bucket = aws_s3_bucket.kinetic_ws_lambda.id
 
-  key    = "archivist.zip"
-  source = local.archivist_archive
-  tags = {
-    Name = "Kinetic Workspaces Archivist"
-  }
-  etag = filemd5(local.archivist_archive)
-}
+#   key    = "archivist.zip"
+#   source = local.archivist_archive
+#   tags = {
+#     Name = "Kinetic Workspaces Archivist"
+#   }
+#   etag = filemd5(local.archivist_archive)
+# }
 
 resource "aws_lambda_function" "kinetic_ws_archivist" {
   function_name = "KineticWorkspacesArchivist"
 
-  s3_bucket = aws_s3_bucket.kinetic_ws_lambda.id
-  s3_key    = "archivist.zip"
+  # s3_bucket = aws_s3_bucket.kinetic_ws_lambda.id
+  # s3_key    = "archivist.zip"
 
   timeout     = 900 # 15 minutes
   memory_size = 1024
   runtime     = "go1.x"
   handler     = "archivist"
 
-  source_code_hash = filebase64sha256(local.archivist_archive)
+  filename = data.archive_file.kinetic_ws_archivist_zip.output_path
+
+  source_code_hash = data.archive_file.kinetic_ws_archivist_zip.output_base64sha256
+
 
   vpc_config {
     subnet_ids         = [aws_subnet.kinetic_workspaces.id]
@@ -52,6 +55,29 @@ resource "aws_s3_bucket" "kinetic_workspaces_archives" {
     Name = "KineticWorkspacesArchive"
   }
 }
+
+resource "null_resource" "kinetic_ws_archivist_build" {
+  triggers = {
+    main_go = base64sha256(file("${path.module}/../archivist/main.go"))
+  }
+
+  provisioner "local-exec" {
+    command = <<EOT
+    pushd ${path.module}/../archivist && \
+    GOARCH=amd64 GOOS=linux go build && \
+    popd
+EOT
+  }
+}
+
+data "archive_file" "kinetic_ws_archivist_zip" {
+  type        = "zip"
+  output_path = "${path.module}/../archivist/archivist.zip"
+  source_file = "${path.module}/../archivist/archivist"
+
+  depends_on = [null_resource.kinetic_ws_archivist_build]
+}
+
 
 
 resource "aws_iam_role" "kinetic_ws_archivist_lambda" {
@@ -144,47 +170,3 @@ resource "aws_iam_role_policy_attachment" "kinetic_ws_archivist_invoke_lambda" {
 
 
 
-// Create state machine for step function
-resource "aws_sfn_state_machine" "sfn_state_machine" {
-  name     = "KineticWorkspacesArchive"
-  role_arn = aws_iam_role.kinetic_ws_archivist_states.arn
-
-  definition = <<EOF
-{
-  "StartAt": "kinetic_ws_archivist",
-  "States": {
-
-    "kinetic_ws_archivist": {
-      "Comment": "Run the archivist func.",
-      "Type": "Task",
-      "Resource": "${aws_lambda_function.kinetic_ws_archivist.arn}",
-      "Next": "send-notification"
-    },
-
-    "send-notification": {
-      "Comment": "Trigger notification using AWS SNS",
-      "Type": "Parallel",
-      "End": true,
-      "Branches": [
-        {
-         "StartAt": "send-sms-notification",
-         "States": {
-            "send-sms-notification": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::sns:publish",
-              "Parameters": {
-                "Message": "SMS: Comlpeted $",
-                "PhoneNumber": "${var.email_address_notification}"
-              },
-              "End": true
-            }
-         }
-       }]
-    }
-  }
-}
-EOF
-
-  depends_on = [aws_lambda_function.kinetic_ws_archivist]
-
-}

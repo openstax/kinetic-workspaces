@@ -311,24 +311,6 @@ resource "aws_lambda_permission" "kinetic_ws_front_desk_api_gw" {
 }
 
 
-# resource "aws_apigatewayv2_domain_name" "kinetic_workspaces" {
-#   domain_name = "${var.subDomainName}.${var.baseDomainName}"
-
-#   domain_name_configuration {
-#     certificate_arn = aws_acm_certificate.kinetic_workspaces.arn
-#     endpoint_type   = "REGIONAL"
-#     security_policy = "TLS_1_2"
-#   }
-
-#   depends_on = [aws_acm_certificate_validation.kinetic_workspaces]
-# }
-
-# resource "aws_apigatewayv2_api_mapping" "kinetic_workspaces" {
-#   stage       = aws_apigatewayv2_stage.kinetic_ws_front_desk.id
-#   api_id      = aws_apigatewayv2_api.kinetic_ws_front_desk.id
-#   domain_name = aws_apigatewayv2_domain_name.kinetic_workspaces.id
-# }
-
 output "kinetic_workspaces_front_desk_url" {
   description = "URL for API lambda stage."
   value       = aws_lambda_function_url.kinetic_ws_front_desk.function_url

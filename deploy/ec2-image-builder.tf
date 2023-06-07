@@ -89,6 +89,9 @@ resource "aws_imagebuilder_image" "kinetic_workspaces" {
   enhanced_image_metadata_enabled  = true
 }
 
+# this does not force replacement when the file changes, it only tells terraform to wait
+# until their uploaded before running this step. To force regeneration run:
+# terraform apply -replace=aws_imagebuilder_infrastructure_configuration.kinetic_workspaces
 resource "aws_imagebuilder_infrastructure_configuration" "kinetic_workspaces" {
   name                          = "kinetic_workspaces_infrastructure_configuration"
   description                   = "AWS image builder config for EC2 with Kinetic_Workspaces hosted"
@@ -97,7 +100,6 @@ resource "aws_imagebuilder_infrastructure_configuration" "kinetic_workspaces" {
   security_group_ids            = [aws_security_group.ec2_kinetic_workspaces.id]
   subnet_id                     = aws_subnet.kinetic_workspaces.id
   terminate_instance_on_failure = true
-
 }
 
 resource "aws_route_table_association" "kinetic_workspaces" {

@@ -49,7 +49,7 @@ async function provisionProfile(worker: WorkerModel, analysis: Analysis) {
         console.log({ profileUrl })
         const resp = await ssh.execCommand(`
             wget -qO- "${profileUrl}" | sudo -u ${userName} tar xz -C /home/kinetic && \\
-            echo "${analysis.api_key}" >> /home/kinetic/kinetic/api_key.txt
+            echo "ANALYSIS_API_KEY=${analysis.api_key}" >> /home/kinetic/.Renviron
         `)
         if (resp.code != 0) {
             throw new Error(resp.stderr)
