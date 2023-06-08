@@ -3,11 +3,11 @@ resource "random_id" "rstudio_cookie_key" {
 }
 
 
-resource "aws_security_group" "ec2_kinetic_workspaces" {
+resource "aws_security_group" "kinetic_workspaces" {
   description = "Controls access to EC2 Image Builder with Kinetic_Workspaces"
 
   vpc_id = aws_vpc.kinetic_workspaces.id
-  name   = "kinetic-workspaces-ec2"
+  name   = "kinetic-workspaces"
 
   egress {
     from_port = 0
@@ -133,7 +133,7 @@ output "editor_ami_id" {
 
 
 output "workspaces_security_group_id" {
-  value = aws_security_group.ec2_kinetic_workspaces.id
+  value = aws_security_group.kinetic_workspaces.id
 }
 
 output "workspaces_ssh_key_pem" {

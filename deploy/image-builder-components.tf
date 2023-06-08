@@ -50,7 +50,7 @@ resource "aws_imagebuilder_component" "kinetic_workspaces_config_files" {
   })
 }
 
-resource "aws_imagebuilder_component" "ec2_kinetic_enclave" {
+resource "aws_imagebuilder_component" "kinetic_enclave_ec2" {
   name     = "configure_ec2_kinetic_enclave"
   platform = "Linux"
   version  = "1.0.0"

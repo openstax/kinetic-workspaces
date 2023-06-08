@@ -165,7 +165,7 @@ resource "aws_dynamodb_table_item" "kinetic_ws_front_desk_config" {
     "dnsZoneId": { "S": "${aws_route53_zone.kinetic_workspaces.id}" },
     "dnsZoneName": { "S": "${aws_route53_zone.kinetic_workspaces.name}" },
 
-    "SecurityGroupIds" : { "SS": [ "${aws_security_group.ec2_kinetic_workspaces.id}" ] },
+    "SecurityGroupIds" : { "SS": [ "${aws_security_group.kinetic_workspaces.id}" ] },
     "InstanceType": { "S": "t3a.micro" },
     "SubnetId": { "S": "${aws_subnet.kinetic_workspaces.id}" },
     "ImageId": { "S": "${data.aws_ami.kinetic_workspaces.id}" },

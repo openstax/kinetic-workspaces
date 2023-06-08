@@ -94,6 +94,12 @@ resource "aws_iam_policy" "kinetic_workspaces_enclave_image_builder_s3" {
 EOF
 }
 
+
+data "aws_ecr_image" "kinetic_workspaces_enclave" {
+  repository_name = aws_ecr_repository.kinetic_workspaces.name
+  most_recent     = true
+}
+
 resource "aws_iam_role_policy_attachment" "kinetic_workspaces_enclave_image_builder_attachment" {
   role       = aws_iam_role.kinetic_workspaces_enclave.name
   policy_arn = aws_iam_policy.kinetic_workspaces_enclave_image_builder_s3.arn

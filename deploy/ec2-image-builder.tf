@@ -97,7 +97,7 @@ resource "aws_imagebuilder_infrastructure_configuration" "kinetic_workspaces" {
   description                   = "AWS image builder config for EC2 with Kinetic_Workspaces hosted"
   instance_profile_name         = aws_iam_instance_profile.ec2_kinetic_workspaces.name
   instance_types                = ["t3.large"] # using a 2xlarge to speed up builds
-  security_group_ids            = [aws_security_group.ec2_kinetic_workspaces.id]
+  security_group_ids            = [aws_security_group.kinetic_workspaces.id]
   subnet_id                     = aws_subnet.kinetic_workspaces.id
   terminate_instance_on_failure = true
 }

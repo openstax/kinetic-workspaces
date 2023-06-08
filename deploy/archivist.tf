@@ -28,10 +28,9 @@ resource "aws_lambda_function" "kinetic_ws_archivist" {
 
   source_code_hash = data.archive_file.kinetic_ws_archivist_zip.output_base64sha256
 
-
   vpc_config {
     subnet_ids         = [aws_subnet.kinetic_workspaces.id]
-    security_group_ids = [aws_security_group.ec2_kinetic_workspaces.id]
+    security_group_ids = [aws_security_group.kinetic_workspaces.id]
   }
 
   file_system_config {
@@ -39,7 +38,9 @@ resource "aws_lambda_function" "kinetic_ws_archivist" {
     local_mount_path = "/mnt/efs"
   }
 
-  role       = aws_iam_role.kinetic_ws_archivist_lambda.arn
+  # role = aws_iam_role.kinetic_ws_front_desk.arn
+  role = aws_iam_role.kinetic_ws_archivist_lambda.arn
+
   depends_on = [aws_efs_mount_target.kinetic_workspaces]
   environment {
     variables = {
@@ -78,8 +79,6 @@ data "archive_file" "kinetic_ws_archivist_zip" {
   depends_on = [null_resource.kinetic_ws_archivist_build]
 }
 
-
-
 resource "aws_iam_role" "kinetic_ws_archivist_lambda" {
   name = "kinetic_ws_archivist_lambda"
 
@@ -101,21 +100,21 @@ resource "aws_iam_role_policy_attachment" "AWSLambdaVPCAccessExecutionRole" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-resource "aws_iam_role" "kinetic_ws_archivist_states" {
-  name = "kinetic_ws_archivist_states"
+# resource "aws_iam_role" "kinetic_ws_archivist_states" {
+#   name = "kinetic_ws_archivist_states"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Sid    = ""
-      Principal = {
-        Service = "states.amazonaws.com"
-      }
-    }]
-  })
-}
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [{
+#       Action = "sts:AssumeRole"
+#       Effect = "Allow"
+#       Sid    = ""
+#       Principal = {
+#         Service = "states.amazonaws.com"
+#       }
+#     }]
+#   })
+# }
 
 resource "aws_iam_role_policy" "kinetic_workspaces_archivist_lambda" {
   name_prefix = "ec2-kinetic_workspaces-role-policy-"
@@ -161,12 +160,3 @@ resource "aws_iam_policy" "kinetic_ws_invoke_lambda" {
 }
 EOF
 }
-
-// Attach policy to IAM Role for Step Function
-resource "aws_iam_role_policy_attachment" "kinetic_ws_archivist_invoke_lambda" {
-  role       = aws_iam_role.kinetic_ws_archivist_states.name
-  policy_arn = aws_iam_policy.kinetic_ws_invoke_lambda.arn
-}
-
-
-

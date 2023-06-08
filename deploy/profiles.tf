@@ -14,7 +14,7 @@ resource "aws_efs_file_system" "kinetic_workspaces" {
 resource "aws_efs_mount_target" "kinetic_workspaces" {
   file_system_id  = aws_efs_file_system.kinetic_workspaces.id
   subnet_id       = aws_subnet.kinetic_workspaces.id
-  security_groups = [aws_security_group.ec2_kinetic_workspaces.id]
+  security_groups = [aws_security_group.kinetic_workspaces.id]
 }
 
 resource "aws_efs_access_point" "kinetic_workspaces" {
