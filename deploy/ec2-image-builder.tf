@@ -83,19 +83,18 @@ resource "aws_imagebuilder_distribution_configuration" "kinetic_workspaces" {
 }
 
 
+# To force regeneration run:
+# terraform apply -replace=aws_imagebuilder_image.kinetic_workspaces
 resource "aws_imagebuilder_image" "kinetic_workspaces" {
   image_recipe_arn                 = aws_imagebuilder_image_recipe.kinetic_workspaces.arn
   infrastructure_configuration_arn = aws_imagebuilder_infrastructure_configuration.kinetic_workspaces.arn
   enhanced_image_metadata_enabled  = true
 }
 
-# this does not force replacement when the file changes, it only tells terraform to wait
-# until their uploaded before running this step. To force regeneration run:
-# terraform apply -replace=aws_imagebuilder_infrastructure_configuration.kinetic_workspaces
 resource "aws_imagebuilder_infrastructure_configuration" "kinetic_workspaces" {
   name                          = "kinetic_workspaces_infrastructure_configuration"
   description                   = "AWS image builder config for EC2 with Kinetic_Workspaces hosted"
-  instance_profile_name         = aws_iam_instance_profile.ec2_kinetic_workspaces.name
+  instance_profile_name         = aws_iam_instance_profile.kinetic_workspaces_image_builder.name
   instance_types                = ["t3.large"] # using a 2xlarge to speed up builds
   security_group_ids            = [aws_security_group.kinetic_workspaces.id]
   subnet_id                     = aws_subnet.kinetic_workspaces.id

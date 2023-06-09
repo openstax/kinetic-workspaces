@@ -86,7 +86,7 @@ resource "aws_lambda_function" "kinetic_ws_front_desk" {
 
   source_code_hash = filebase64sha256(local.front_desk_archive)
 
-  role = aws_iam_role.kinetic_ws_front_desk.arn
+  role = aws_iam_role.kinetic_workspace_lambda.arn
   environment {
     variables = {
       environment = var.environment_name,
@@ -180,8 +180,8 @@ resource "aws_cloudwatch_log_group" "kinetic_ws_front_desk" {
   retention_in_days = 30
 }
 
-resource "aws_iam_role" "kinetic_ws_front_desk" {
-  name = "kinetic_ws_front_desk"
+resource "aws_iam_role" "kinetic_workspace_lambda" {
+  name = "kinetic_workspace_lambda"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -196,9 +196,9 @@ resource "aws_iam_role" "kinetic_ws_front_desk" {
   })
 }
 
-resource "aws_iam_role_policy" "kinetic_ws_front_desk_db" {
-  name = "kinetic_ws_front_desk_db"
-  role = aws_iam_role.kinetic_ws_front_desk.id
+resource "aws_iam_role_policy" "kinetic_workspace_lambda" {
+  name = "kinetic_workspace_lambda"
+  role = aws_iam_role.kinetic_workspace_lambda.id
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -219,7 +219,9 @@ resource "aws_iam_role_policy" "kinetic_ws_front_desk_db" {
       {
         Effect = "Allow",
         Action = [
-          "s3:GetObject"
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
         ],
         Resource = "${aws_s3_bucket.kinetic_workspaces_conf_files.arn}/*"
       },
@@ -235,6 +237,11 @@ resource "aws_iam_role_policy" "kinetic_ws_front_desk_db" {
           "ec2:TerminateInstances",
           "ec2:DescribeInstances",
           "ec2:DescribeSecurityGroups",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:CreateNetworkInterface",
+          "ec2:DeleteNetworkInterface",
+          "ec2:DescribeInstances",
+          "ec2:AttachNetworkInterface"
         ],
         Resource = [
           "*"
@@ -245,6 +252,13 @@ resource "aws_iam_role_policy" "kinetic_ws_front_desk_db" {
         #     "ec2:ResourceTag/Application" = "KineticWorkspaces"
         #   }
         # }
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "iam:PassRole",
+        ],
+        Resource = "arn:aws:iam::373045849756:role/kinetic_workspaces_enclave"
       },
       {
         Effect = "Allow"
@@ -290,7 +304,7 @@ resource "aws_iam_role_policy" "kinetic_ws_front_desk_db" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_policy" {
-  role       = aws_iam_role.kinetic_ws_front_desk.name
+  role       = aws_iam_role.kinetic_workspace_lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 

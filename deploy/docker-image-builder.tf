@@ -52,28 +52,28 @@ resource "aws_imagebuilder_image_pipeline" "kinetic_workspaces_enclave" {
 }
 
 
-resource "aws_iam_role" "kinetic_workspaces_enclave" {
-  name = "kinetic_workspaces_enclave"
+# resource "aws_iam_role" "kinetic_workspaces_image_builder" {
+#   name = "kinetic_workspaces_image_builder"
 
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "imagebuilder.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-EOF
-}
+#   assume_role_policy = <<EOF
+# {
+#   "Version": "2012-10-17",
+#   "Statement": [
+#     {
+#       "Effect": "Allow",
+#       "Principal": {
+#         "Service": "imagebuilder.amazonaws.com"
+#       },
+#       "Action": "sts:AssumeRole"
+#     }
+#   ]
+# }
+# EOF
+# }
 
 resource "aws_iam_instance_profile" "kinetic_workspaces_enclave_image_builder" {
-  name = "kinetic_workspaces_enclave"
-  role = aws_iam_role.kinetic_workspaces_enclave.name
+  name = "kinetic_workspaces_enclave_image_builder"
+  role = aws_iam_role.kinetic_workspaces_image_builder.name
 }
 
 resource "aws_iam_policy" "kinetic_workspaces_enclave_image_builder_s3" {
@@ -101,7 +101,7 @@ data "aws_ecr_image" "kinetic_workspaces_enclave" {
 }
 
 resource "aws_iam_role_policy_attachment" "kinetic_workspaces_enclave_image_builder_attachment" {
-  role       = aws_iam_role.kinetic_workspaces_enclave.name
+  role       = aws_iam_role.kinetic_workspaces_image_builder.name
   policy_arn = aws_iam_policy.kinetic_workspaces_enclave_image_builder_s3.arn
 }
 

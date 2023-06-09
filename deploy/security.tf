@@ -38,7 +38,7 @@ resource "aws_security_group" "kinetic_workspaces" {
   }
 }
 
-resource "aws_iam_role" "ec2_kinetic_workspaces" {
+resource "aws_iam_role" "kinetic_workspaces_image_builder" {
   name_prefix = "ec2-kinetic_workspaces-role-"
 
   assume_role_policy = jsonencode({
@@ -58,9 +58,9 @@ resource "aws_iam_role" "ec2_kinetic_workspaces" {
 }
 
 
-resource "aws_iam_role_policy" "ec2_kinetic_workspaces" {
-  name_prefix = "ec2-kinetic_workspaces-role-policy-"
-  role        = aws_iam_role.ec2_kinetic_workspaces.name
+resource "aws_iam_role_policy" "kinetic_workspaces_image_builder" {
+  name_prefix = "kinetic_workspaces-image-builder-policy-"
+  role        = aws_iam_role.kinetic_workspaces_image_builder.name
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -107,12 +107,74 @@ resource "aws_iam_role_policy" "ec2_kinetic_workspaces" {
   })
 }
 
+resource "aws_iam_role" "kinetic_workspaces_enclave" {
+  name = "kinetic_workspaces_enclave"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Sid    = ""
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "kinetic_workspaces_enclave" {
+  name = "kinetic_workspaces_enclave"
+  role = aws_iam_role.kinetic_workspaces_enclave.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid      = "APIAccessForDynamoDBStreams"
+        Effect   = "Allow",
+        Resource = aws_dynamodb_table.kinetic_ws_front_desk.arn,
+        Action = [
+          "dynamodb:DeleteItem",
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:BatchWriteItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+        ],
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ],
+        Resource = "${aws_s3_bucket.kinetic_workspaces_conf_files.arn}/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "states:SendTaskSuccess",
+          "states:SendTaskFailure",
+        ],
+        Resource = "*"
+      },
+
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "kinetic_workspaces_enclave" {
+  name_prefix = "kinetic-workspaces-enclave-profile-"
+  role        = aws_iam_role.kinetic_workspaces_enclave.name
+}
 
 
 
-resource "aws_iam_instance_profile" "ec2_kinetic_workspaces" {
-  name_prefix = "ec2-kinetic-workspaces-instance-profile-"
-  role        = aws_iam_role.ec2_kinetic_workspaces.name
+resource "aws_iam_instance_profile" "kinetic_workspaces_image_builder" {
+  name_prefix = "kinetic-workspaces-image-builder-profile-"
+  role        = aws_iam_role.kinetic_workspaces_image_builder.name
 }
 
 resource "aws_iam_role_policy_attachment" "role-policy-attachment" {
@@ -122,7 +184,7 @@ resource "aws_iam_role_policy_attachment" "role-policy-attachment" {
     "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   ])
 
-  role       = aws_iam_role.ec2_kinetic_workspaces.name
+  role       = aws_iam_role.kinetic_workspaces_image_builder.name
   policy_arn = each.value
 }
 

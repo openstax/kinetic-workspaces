@@ -100,21 +100,6 @@ resource "aws_iam_role_policy_attachment" "AWSLambdaVPCAccessExecutionRole" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-# resource "aws_iam_role" "kinetic_ws_archivist_states" {
-#   name = "kinetic_ws_archivist_states"
-
-#   assume_role_policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [{
-#       Action = "sts:AssumeRole"
-#       Effect = "Allow"
-#       Sid    = ""
-#       Principal = {
-#         Service = "states.amazonaws.com"
-#       }
-#     }]
-#   })
-# }
 
 resource "aws_iam_role_policy" "kinetic_workspaces_archivist_lambda" {
   name_prefix = "ec2-kinetic_workspaces-role-policy-"

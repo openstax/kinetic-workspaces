@@ -7,10 +7,13 @@
   "private": true,
   "dependencies": {
     "@aws-sdk/client-ec2": "^3.346.0",
+    "@aws-sdk/client-sfn": "^3.348.0",
+    "@aws-sdk/types": "^3.347.0",
     "@types/aws-lambda": "^8.10.116",
     "@types/node": "^20.2.5",
     "aws-lambda": "^1.0.7",
     "esbuild": "^0.17.19",
+    "node-docker-api": "^1.1.22",
     "typescript": "^5.1.3"
   }
 }

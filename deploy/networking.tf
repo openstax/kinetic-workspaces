@@ -58,6 +58,24 @@ resource "aws_route_table" "kinetic_workspaces" {
   }
 }
 
+
+resource "aws_vpc_endpoint" "kinetic_workspaces_s3" {
+  vpc_id            = aws_vpc.kinetic_workspaces.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+}
+
+resource "aws_vpc_endpoint" "kinetic_workspaces_ec2" {
+  vpc_id            = aws_vpc.kinetic_workspaces.id
+  service_name      = "com.amazonaws.${var.aws_region}.ec2"
+  vpc_endpoint_type = "Interface"
+
+  security_group_ids  = [aws_security_group.kinetic_workspaces.id]
+  subnet_ids          = [aws_subnet.kinetic_workspaces.id]
+  private_dns_enabled = true
+}
+
+
 output "workspaces_vpc_id" {
   value = aws_vpc.kinetic_workspaces.id
 }
@@ -66,8 +84,3 @@ output "workspaces_subnet_id" {
   value = aws_subnet.kinetic_workspaces.id
 }
 
-resource "aws_vpc_endpoint" "kinetic_workspaces_s3" {
-  vpc_id            = aws_vpc.kinetic_workspaces.id
-  service_name      = "com.amazonaws.${var.aws_region}.s3"
-  vpc_endpoint_type = "Gateway"
-}

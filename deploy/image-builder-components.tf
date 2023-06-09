@@ -50,8 +50,8 @@ resource "aws_imagebuilder_component" "kinetic_workspaces_config_files" {
   })
 }
 
-resource "aws_imagebuilder_component" "kinetic_enclave_ec2" {
-  name     = "configure_ec2_kinetic_enclave"
+resource "aws_imagebuilder_component" "kinetic_install_docker_build" {
+  name     = "kinetic_install_docker_build"
   platform = "Linux"
   version  = "1.0.0"
 
@@ -61,13 +61,22 @@ resource "aws_imagebuilder_component" "kinetic_enclave_ec2" {
       name = "build"
       steps = [{
         action    = "ExecuteBash"
-        name      = "download_and_install_kinetic_workspaces"
+        name      = "run_install_docker_build"
         onFailure = "Abort"
         inputs = {
           commands = [
             "export DEBIAN_FRONTEND=noninteractive",
+            "ls /tmp",
+            "sudo bash /tmp/install_ruby",
+            "sudo apt-get install -y ca-certificates curl gnupg",
+            "sudo install -m 0755 -d /etc/apt/keyrings",
+            "curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
+            "sudo chmod a+r /etc/apt/keyrings/docker.gpg",
+            "echo deb [signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bullseye stable | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
+            "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -",
             "sudo apt-get update",
-            "sudo apt-get install -y ruby-full",
+            "sudo apt-get install -y nodejs docker-ce docker-buildx-plugin docker-compose-plugin",
+            "sudo npm install -g node-docker-api @aws-sdk/client-ec2 @aws-sdk/client-s3 @aws-sdk/client-sfn",
           ]
         }
       }]
