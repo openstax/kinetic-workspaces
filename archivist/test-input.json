@@ -1,6 +1,9 @@
 {
+  "key": "rn_ab24",
   "analysis_id": 3,
-  "directory": "/mnt/efs/editor/3",
+  "enclave_api_key": "ec_1234",
+  "analysis_api_key" : "nukzfYaGEb9byrcJSb",
+  "src_directory": "/mnt/efs/editor/3",
   "bucket": "kinetic-workspaces-archive",
-  "destination": "review/3/2023-06-06T16:12:35-05:00.zst"
+  "destination": "review/3"
 }

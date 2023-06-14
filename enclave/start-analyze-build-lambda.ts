@@ -7,26 +7,32 @@ import { EC2Client, RunInstancesCommand } from "@aws-sdk/client-ec2";
 
 import { Handler } from 'aws-lambda'
 
+import type { EventInput, AnalyzePayload } from './types'
+
 // @ts-ignore
 import userData from './ec2-user-data.sh'
 
 type Event = {
-    input:{
-        archive_path: string
-        analysis_id: number
-    }
+    input: EventInput
     token: string
 }
 
 export const handler: Handler<Event> = async ({ input, token }) => {
+const payload:AnalyzePayload = {
+        task_token: token,
+        region: process.env.AWS_REGION || 'us-east-1',
+        base_image: process.env.BASE_IMAGE || '',
+        ...input
+    }
+
+    console.log({ payload })
+
     const script = userData
-        .replace(/TOKEN_XXXX_TOKEN/, token)
         .replace(/SCRIPT_XXXX_SCRIPT/, process.env.ANALYZE_SCRIPT)
+        .replace(/PAYLOAD_XXXX_PAYLOAD/, Buffer.from(JSON.stringify(payload)).toString('base64'))
 
-
-    console.log(script)
     console.log(JSON.stringify(process.env, null, 2))
-    const client = new EC2Client({ region: process.env.AWS_REGION })
+    const client = new EC2Client({ region: payload.region })
 
     const cmd = new RunInstancesCommand({
         MinCount: 1, MaxCount: 1,

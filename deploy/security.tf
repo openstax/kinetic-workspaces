@@ -74,16 +74,16 @@ resource "aws_iam_role_policy" "kinetic_workspaces_image_builder" {
         ],
         Resource = "arn:aws:s3:::${aws_s3_bucket.kinetic_workspaces_conf_files.bucket}"
       },
-      {
-        Effect = "Allow",
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:ListMultipartUploadParts",
-          "s3:AbortMultipartUpload",
-        ],
-        Resource = "arn:aws:s3:::${aws_s3_bucket.kinetic_workspaces_conf_files.bucket}/*"
-      },
+      # {
+      #   Effect = "Allow",
+      #   Action = [
+      #     "s3:GetObject",
+      #     "s3:PutObject",
+      #     "s3:ListMultipartUploadParts",
+      #     "s3:AbortMultipartUpload",
+      #   ],
+      #   Resource = "arn:aws:s3:::${aws_s3_bucket.kinetic_workspaces_conf_files.bucket}/*"
+      # },
       {
         Effect = "Allow",
         Action = [
@@ -142,6 +142,42 @@ resource "aws_iam_role_policy" "kinetic_workspaces_enclave" {
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
         ],
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "ecr:CompleteLayerUpload",
+          "ecr:GetAuthorizationToken",
+          "ecr:UploadLayerPart",
+          "ecr:InitiateLayerUpload",
+          "ecr:BatchGetImage",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:PutImage"
+        ],
+        Resource = "${aws_ecr_repository.kinetic_workspaces.arn}/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "ecr:BatchGetImage",
+        ],
+        Resource = aws_ecr_repository.kinetic_workspaces.arn
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "ecr:GetAuthorizationToken",
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ],
+        Resource = "${aws_s3_bucket.kinetic_workspaces_archives.arn}/*"
       },
       {
         Effect = "Allow",

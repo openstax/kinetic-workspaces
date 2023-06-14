@@ -1,0 +1,11 @@
+#!/bin/bash
+
+TYPE=$1
+ID=$2
+
+IP=`aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=${TYPE}-${ID}" "Name=instance-state-name,Values=running" \
+  --query 'Reservations[*].Instances[*].[PublicIpAddress]' \
+  --output text`
+
+echo $IP

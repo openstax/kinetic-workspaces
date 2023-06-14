@@ -8,3 +8,4 @@ infrastructure.json
 front-desk/lambda
 front-desk/dist
 *.pem
+enclave/temp

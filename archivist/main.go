@@ -19,31 +19,39 @@ import (
 )
 
 type Event struct {
-	AnalysisID  int64  `json:"analysis_id"`
-	Directory   string `json:"directory"`
-	Bucket      string `json:"bucket"`
-	Destination string `json:"destination"`
+	Key            string `json:"key"`
+	AnalysisID     int64  `json:"analysis_id"`
+	EnclaveApiKey  string `json:"enclave_api_key"`
+	AnalysisApiKey string `json:"analysis_api_key"`
+	SrcDirectory   string `json:"src_directory"`
+	Bucket         string `json:"bucket"`
+	Destination    string `json:"destination"`
+}
+
+func (evt *Event) BucketPath() *string {
+	return aws.String(fmt.Sprintf("%s/%s.tar.zst", evt.Destination, evt.Key))
 }
 
 type Output struct {
-	ArchivePath string `json:"archive_path"`
-	AnalysisID  int64  `json:"analysis_id"`
+	Key            string `json:"key"`
+	ArchivePath    string `json:"archive_path"`
+	AnalysisID     int64  `json:"analysis_id"`
+	EnclaveApiKey  string `json:"enclave_api_key"`
+	AnalysisApiKey string `json:"analysis_api_key"`
 }
 
 func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 
-	fmt.Printf("hello world, reading files from %s\n", evt.Directory)
+	fmt.Printf("hello world, reading %s writing to %s\n", evt.SrcDirectory, *evt.BucketPath())
 
 	reader, writer := io.Pipe()
 
-	fmt.Println(listDirectoryContents(evt.Directory))
+	fmt.Println(listDirectoryContents(evt.SrcDirectory))
 
 	opts := archiver.FromDiskOptions{FollowSymlinks: false, ClearAttributes: true}
 	files, err := archiver.FilesFromDisk(&opts, map[string]string{
-		evt.Directory: "", // fmt.Sprintf("workspaces-archive/%d", evt.AnalysisID),
+		evt.SrcDirectory: "",
 	})
-
-	//	fmt.Printf("files: %v\n", files)
 
 	if err != nil {
 		return nil, err
@@ -82,15 +90,10 @@ func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 	sess := session.Must(session.NewSession())
 
 	uploader := s3manager.NewUploader(sess)
-	// fileName := "/mnt/efs/kinetic/.lintr"
-	// f, err := os.Open(fileName)
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to open file %q, %v", fileName, err)
-	// }
 
 	result, err := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
 		Bucket: aws.String(evt.Bucket),
-		Key:    aws.String(evt.Destination),
+		Key:    evt.BucketPath(),
 		Body:   reader,
 	})
 	if err != nil {
@@ -99,12 +102,15 @@ func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 
 	// Check if an error occurred in the goroutine
 	if errGoroutine := <-errChan; errGoroutine != nil {
-		return nil, fmt.Errorf("failed to read %s: %s", evt.Directory, errGoroutine.Error())
+		return nil, fmt.Errorf("failed to read %s: %s", evt.SrcDirectory, errGoroutine.Error())
 	}
 
 	output := Output{
-		ArchivePath: result.Location,
-		AnalysisID:  evt.AnalysisID,
+		Key:            evt.Key,
+		ArchivePath:    result.Location,
+		AnalysisID:     evt.AnalysisID,
+		EnclaveApiKey:  evt.EnclaveApiKey,
+		AnalysisApiKey: evt.AnalysisApiKey,
 	}
 
 	return &output, nil

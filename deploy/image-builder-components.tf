@@ -75,8 +75,8 @@ resource "aws_imagebuilder_component" "kinetic_install_docker_build" {
             "echo deb [signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bullseye stable | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
             "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -",
             "sudo apt-get update",
-            "sudo apt-get install -y nodejs docker-ce docker-buildx-plugin docker-compose-plugin",
-            "sudo npm install -g node-docker-api @aws-sdk/client-ec2 @aws-sdk/client-s3 @aws-sdk/client-sfn",
+            "sudo apt-get install -y nodejs zstd docker-ce docker-buildx-plugin docker-compose-plugin",
+            "sudo npm install -g dockerode @aws-sdk/client-ecr @aws-sdk/client-ec2 @aws-sdk/client-s3 @aws-sdk/client-sfn",
           ]
         }
       }]

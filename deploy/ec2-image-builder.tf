@@ -39,9 +39,8 @@ data "aws_ami" "kinetic_workspaces_parent_image" {
 data "aws_partition" "current" {}
 
 resource "aws_imagebuilder_image_pipeline" "kinetic_workspaces" {
-  name             = "kinetic_workspaces_image_pipeline"
-  image_recipe_arn = aws_imagebuilder_image_recipe.kinetic_workspaces.arn
-
+  name                             = "kinetic_workspaces_image_pipeline"
+  image_recipe_arn                 = aws_imagebuilder_image_recipe.kinetic_workspaces.arn
   infrastructure_configuration_arn = aws_imagebuilder_infrastructure_configuration.kinetic_workspaces.arn
 }
 
