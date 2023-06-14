@@ -54,23 +54,23 @@ resource "aws_apigatewayv2_stage" "kinetic_ws_front_desk" {
   auto_deploy = true
 
 
-  # access_log_settings {
-  #   destination_arn = aws_cloudwatch_log_group.kinetic_ws_front_desk_api_gw.arn
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.kinetic_ws_front_desk_api_gw.arn
 
-  #   format = jsonencode({
-  #     requestId               = "$context.requestId"
-  #     sourceIp                = "$context.identity.sourceIp"
-  #     requestTime             = "$context.requestTime"
-  #     protocol                = "$context.protocol"
-  #     httpMethod              = "$context.httpMethod"
-  #     resourcePath            = "$context.resourcePath"
-  #     routeKey                = "$context.routeKey"
-  #     status                  = "$context.status"
-  #     responseLength          = "$context.responseLength"
-  #     integrationErrorMessage = "$context.integrationErrorMessage"
-  #     }
-  #   )
-  # }
+    format = jsonencode({
+      requestId               = "$context.requestId"
+      sourceIp                = "$context.identity.sourceIp"
+      requestTime             = "$context.requestTime"
+      protocol                = "$context.protocol"
+      httpMethod              = "$context.httpMethod"
+      resourcePath            = "$context.resourcePath"
+      routeKey                = "$context.routeKey"
+      status                  = "$context.status"
+      responseLength          = "$context.responseLength"
+      integrationErrorMessage = "$context.integrationErrorMessage"
+      }
+    )
+  }
 }
 
 
@@ -309,11 +309,11 @@ resource "aws_iam_role_policy_attachment" "lambda_policy" {
 }
 
 
-# resource "aws_cloudwatch_log_group" "kinetic_ws_front_desk_api_gw" {
-#   name = "/aws/api_gw/${aws_apigatewayv2_api.kinetic_ws_front_desk.name}"
+resource "aws_cloudwatch_log_group" "kinetic_ws_front_desk_api_gw" {
+  name = "/aws/api_gw/${aws_apigatewayv2_api.kinetic_ws_front_desk.name}"
 
-#   retention_in_days = 30
-# }
+  retention_in_days = 30
+}
 
 resource "aws_lambda_permission" "kinetic_ws_front_desk_api_gw" {
   statement_id  = "AllowExecutionFromAPIGateway"

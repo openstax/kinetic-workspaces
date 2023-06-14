@@ -8,6 +8,7 @@ import { Readable } from 'stream'
 import { URL } from 'node:url'
 
 import type { AnalyzeBuildEventOutput, AnalyzePayload } from './types'
+import { exec } from 'node:child_process'
 
 const args: AnalyzePayload  = JSON.parse(Buffer.from(process.argv[2], 'base64').toString())
 
@@ -42,6 +43,12 @@ setWorkingDirectory()
     .then(uploadImage)
     .then(signalSuccess)
     .catch(signalFailure)
+    .then(shutdownHost)
+
+
+async function shutdownHost() {
+    exec('sudo shutdown now')
+}
 
 async function signalSuccess() {
     const output:AnalyzeBuildEventOutput = {
@@ -61,7 +68,6 @@ async function signalFailure(error: any) {
         error: String(error).slice(0, 255),
         cause: error instanceof Error ? error.stack : '',
     }))
-
 }
 
 async function downloadArchive() {
@@ -86,6 +92,52 @@ async function setWorkingDirectory() {
     process.chdir(dir)
     return dir
 }
+class Timer {
+    startTime: Date
+    constructor() {
+        this.startTime = new Date();
+    }
+
+    static start() {
+        return new Timer()
+    }
+
+    end() {
+        const endTime = new Date();
+        const elapsedTime = endTime.getTime() - this.startTime.getTime()
+        return elapsedTime / 1000;
+    }
+}
+
+const followProgressCB = (activity: string, resolve: any, reject: any) => (err: any, stream: any) => {
+    const timer = Timer.start()
+    console.log(`starting ${activity}`)
+    const fail = (err:any) => {
+        console.log(`${activity} failed after ${timer.end()} seconds`)
+        reject(err)
+    }
+    if (err) {
+        fail(err)
+    } else {
+        docker.modem.followProgress(stream,
+            (err, status) => {  // completion callback
+                // console.log({ err, status })
+                const errorStatus = status.find(s => s?.error)
+                if (errorStatus) {
+                    console.log(errorStatus)
+                    fail(errorStatus.error)
+                } else if (err) {
+                    fail(err)
+                }
+                else {
+                    console.log(`finished ${activity} (${timer.end()} seconds)`)
+                    resolve(status)
+                }
+            },
+            // (status) => console.log(`progress status: ${status}`) // very verbose
+        )
+    }
+}
 
 async function buildDockerImage() {
     // https://github.com/apocas/dockerode/issues/448#issuecomment-384801924
@@ -96,8 +148,13 @@ async function buildDockerImage() {
 
     const authconfig: AuthConfig = { username, password, serveraddress: BASE_IMAGE_URL.host }
 
-    const reply = await docker.pull(args.base_image, { authconfig })
-    if (reply.statusCode != 200) throw new Error('failed to pull image')
+
+
+    await new Promise((resolve, reject) => {
+        docker.pull(args.base_image, { authconfig }, followProgressCB(`pull from: ${args.base_image}`, resolve, reject))
+    })
+
+
 
     await writeFile('Dockerfile', `
         FROM ${args.base_image}
@@ -113,7 +170,7 @@ async function buildDockerImage() {
 
     const stream = await docker.buildImage({
         context: process.cwd(), src: ['Dockerfile', ARCHIVE_NAME],
-    }, { t: DEST_IMAGE_TAG })
+    }, { t: DEST_IMAGE_TAG, authconfig })
     if (stream) {
         await new Promise((resolve, reject) => {
             docker.modem.followProgress(stream, (err, res) => {
@@ -122,8 +179,6 @@ async function buildDockerImage() {
             });
         });
     }
-
-
     return authconfig
 }
 
@@ -132,19 +187,20 @@ async function uploadImage(authconfig: AuthConfig) {
 //    return
     const img = docker.getImage(DEST_IMAGE_TAG)
 
-    const stream = await img.push({
-        tag: args.key,
-        authconfig,
+    await new Promise((resolve, reject) => {
+        img.push({
+            tag: args.key,
+            authconfig,
+        }, followProgressCB(`pushing to tag ${args.key}`, resolve, reject))
     })
+    // if (stream) {
 
-    if (stream) {
-
-        await new Promise((resolve, reject) => {
-            docker.modem.followProgress(stream, (err, res) => {
-                console.log(res)
-                err ? reject(err) : resolve(res)
-            });
-        });
-    }
+    //     await new Promise((resolve, reject) => {
+    //         docker.modem.followProgress(stream, (err, res) => {
+    //             console.log(res)
+    //             err ? reject(err) : resolve(res)
+    //         });
+    //     });
+    // }
 
 }

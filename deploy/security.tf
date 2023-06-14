@@ -143,23 +143,31 @@ resource "aws_iam_role_policy" "kinetic_workspaces_enclave" {
           "dynamodb:UpdateItem",
         ],
       },
+      # {
+      #   Effect = "Allow",
+      #   Action = [
+      #     "ecr:CompleteLayerUpload",
+      #     "ecr:GetDownloadUrlForLayer",
+      #     "ecr:GetAuthorizationToken",
+      #     "ecr:UploadLayerPart",
+
+      #     "ecr:BatchGetImage",
+      #     "ecr:BatchCheckLayerAvailability",
+      #     "ecr:PutImage"
+      #   ],
+      #   Resource = "${aws_ecr_repository.kinetic_workspaces.arn}/*"
+      # },
       {
         Effect = "Allow",
         Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:BatchGetImage",
           "ecr:CompleteLayerUpload",
           "ecr:GetAuthorizationToken",
-          "ecr:UploadLayerPart",
+          "ecr:GetDownloadUrlForLayer",
           "ecr:InitiateLayerUpload",
-          "ecr:BatchGetImage",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:PutImage"
-        ],
-        Resource = "${aws_ecr_repository.kinetic_workspaces.arn}/*"
-      },
-      {
-        Effect = "Allow",
-        Action = [
-          "ecr:BatchGetImage",
+          "ecr:PutImage",
+          "ecr:UploadLayerPart",
         ],
         Resource = aws_ecr_repository.kinetic_workspaces.arn
       },
