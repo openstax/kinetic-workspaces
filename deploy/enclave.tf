@@ -34,18 +34,33 @@ resource "aws_sfn_state_machine" "kinetic_archive" {
         Comment  = "Run the archivist func."
         Type     = "Task"
         Resource = aws_lambda_function.kinetic_ws_archivist.arn
-        Next     = "start_analyze_and_build"
+        Next     = "analyze and build"
       },
-      start_analyze_and_build = {
+      "analyze and build" = {
         Comment  = "Start EC2 analyze-and-build"
         Type     = "Task"
         Resource = "arn:aws:states:::lambda:invoke.waitForTaskToken"
 
         Parameters = {
-          FunctionName = aws_lambda_function.kinetic_ws_start_analyze_and_build.arn
+          FunctionName = aws_lambda_function.kinetic_ws_run_ec2_task.arn
           Payload = {
             "input.$" = "$"
             "token.$" = "$$.Task.Token"
+            "script"  = "s3://${aws_s3_object.kinetic_enclave_analyze_and_build_script.bucket}/${aws_s3_object.kinetic_enclave_analyze_and_build_script.key}"
+          }
+        },
+        Next = "run enclave" # TODO: add a pause for manual review
+      },
+      "run enclave" = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::lambda:invoke.waitForTaskToken"
+
+        Parameters = {
+          FunctionName = aws_lambda_function.kinetic_ws_run_ec2_task.arn
+          Payload = {
+            "input.$" = "$"
+            "token.$" = "$$.Task.Token"
+            "script"  = "s3://${aws_s3_object.kinetic_enclave_run_script.bucket}/${aws_s3_object.kinetic_enclave_run_script.key}"
           }
         },
         End = true
@@ -54,58 +69,61 @@ resource "aws_sfn_state_machine" "kinetic_archive" {
   })
 
   depends_on = [aws_lambda_function.kinetic_ws_archivist]
-
 }
 
 
-resource "null_resource" "kinetic_ws_start_analyze_and_build" {
+resource "null_resource" "kinetic_ws_enclave_ts" {
   triggers = {
-    index_ts  = base64sha256(file("${path.module}/../enclave/start-analyze-build-lambda.ts"))
-    user_data = base64sha256(file("${path.module}/../enclave/ec2-user-data.sh"))
-    build_ts  = base64sha256(file("${path.module}/../enclave/analyze-and-build.ts"))
+    run_task_ts = base64sha256(file("${path.module}/../enclave/run-ec2-task.ts"))
+    user_data   = base64sha256(file("${path.module}/../enclave/ec2-user-data.sh"))
+    build_ts    = base64sha256(file("${path.module}/../enclave/analyze-and-build.ts"))
+    ec_run_ts   = base64sha256(file("${path.module}/../enclave/enclave-run.ts"))
+    shared_ts   = base64sha256(file("${path.module}/../enclave/shared.ts"))
   }
 
   provisioner "local-exec" {
     working_dir = "${path.module}/../enclave"
-    command     = "./build-lambda"
+    command     = "./build-ts"
   }
 }
 
-data "archive_file" "kinetic_ws_start_analyze_and_build_zip" {
+data "archive_file" "kinetic_ws_run_ec2_task_zip" {
   type        = "zip"
-  output_path = "${path.module}/../enclave/dist/start-analyze-build-lambda.zip"
-  source_file = "${path.module}/../enclave/dist/start-analyze-build-lambda.js"
-  depends_on  = [null_resource.kinetic_ws_start_analyze_and_build]
+  output_path = "${path.module}/../enclave/dist/run-ec2-task.zip"
+  source_file = "${path.module}/../enclave/dist/run-ec2-task.js"
+  depends_on  = [null_resource.kinetic_ws_enclave_ts]
+}
+
+resource "aws_s3_object" "kinetic_enclave_run_script" {
+  bucket = aws_s3_bucket.kinetic_workspaces_conf_files.id
+  key    = "scripts/enclave-run.js"
+  source = "${path.module}/../enclave/dist/enclave-run.js"
+  # isn't used by s3, but is needed to pickup on changes to the ts
+  source_hash = filemd5("${path.module}/../enclave/enclave-run.ts")
+  depends_on  = [null_resource.kinetic_ws_enclave_ts]
 }
 
 resource "aws_s3_object" "kinetic_enclave_analyze_and_build_script" {
   bucket = aws_s3_bucket.kinetic_workspaces_conf_files.id
-
   key    = "scripts/analyze-and-build.js"
   source = "${path.module}/../enclave/dist/analyze-and-build.js"
-
   # isn't used by s3, but is needed to pickup on changes to the ts
   source_hash = filemd5("${path.module}/../enclave/analyze-and-build.ts")
-  depends_on  = [null_resource.kinetic_ws_start_analyze_and_build]
-
-
+  depends_on  = [null_resource.kinetic_ws_enclave_ts]
 }
 
 
-resource "aws_lambda_function" "kinetic_ws_start_analyze_and_build" {
-  function_name = "KineticWorkspacesStartAnalyzeBuild"
+resource "aws_lambda_function" "kinetic_ws_run_ec2_task" {
+  function_name = "KineticWorkspacesRunEc2Task"
 
-  filename = data.archive_file.kinetic_ws_start_analyze_and_build_zip.output_path
-
-  # s3_bucket = aws_s3_bucket.kinetic_ws_lambda.id
-  # s3_key    = "start_analyze_and_build.zip"
+  filename = data.archive_file.kinetic_ws_run_ec2_task_zip.output_path
 
   timeout     = 60 # 1 minutes, is only starting a ec2 instance, doesn't wait for it to become available
   memory_size = 512
   runtime     = "nodejs18.x"
-  handler     = "start-analyze-build-lambda.handler"
+  handler     = "run-ec2-task.handler"
 
-  source_code_hash = data.archive_file.kinetic_ws_start_analyze_and_build_zip.output_base64sha256
+  source_code_hash = data.archive_file.kinetic_ws_run_ec2_task_zip.output_base64sha256
 
   vpc_config {
     subnet_ids         = [aws_subnet.kinetic_workspaces.id]
@@ -113,7 +131,6 @@ resource "aws_lambda_function" "kinetic_ws_start_analyze_and_build" {
   }
   role = aws_iam_role.kinetic_workspace_lambda.arn
 
-  depends_on = [aws_efs_mount_target.kinetic_workspaces]
   environment {
     variables = {
       IMAGE_ID         = data.aws_ami.kinetic_enclave.id
@@ -122,11 +139,12 @@ resource "aws_lambda_function" "kinetic_ws_start_analyze_and_build" {
       ENVIRONMENT      = var.environment_name
       BASE_IMAGE       = "${aws_ecr_repository.kinetic_workspaces.repository_url}:base"
       SECURITY_GID     = aws_security_group.kinetic_workspaces.id
-      ANALYZE_SCRIPT   = "s3://${aws_s3_object.kinetic_enclave_analyze_and_build_script.bucket}/${aws_s3_object.kinetic_enclave_analyze_and_build_script.key}"
       IAM_INSTANCE_ARN = aws_iam_instance_profile.kinetic_workspaces_enclave.arn
     }
   }
 }
+
+
 
 
 # resource "aws_iam_role_policy" "kinetic_workspaces_enclave_lambda" {

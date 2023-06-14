@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 SCRIPT_SRC='SCRIPT_XXXX_SCRIPT'
 PAYLOAD='PAYLOAD_XXXX_PAYLOAD'
 
