@@ -1,7 +1,7 @@
 #!/bin/bash
 
-set -x
-#
+set -e
+
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 TYPE=$1
@@ -9,10 +9,15 @@ ID=$2
 
 [[ -z $IP ]] && IP=`${DIR}/ip-of-instance $TYPE $ID`
 
+if [[ -z $IP ]]; then
+  echo "No IP found for $TYPE $ID"
+  exit 1
+fi
+
 OPTS="-o UserKnownHostsFile=/dev/null -o CheckHostIP=no -o LogLevel=ERROR -o StrictHostKeyChecking=no -i ${DIR}/../tmp/key.pem"
 
 if [[ -n $SCP ]]; then
-  scp $OPTS admin@$IP:"${@:3}"
+  scp $OPTS ubuntu@$IP:"${@:3}"
 else
-  ssh $OPTS admin@$IP "${@:3}"
+  ssh $OPTS ubuntu@$IP "${@:3}"
 fi

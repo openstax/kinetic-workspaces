@@ -2,7 +2,7 @@ import { APIGatewayProxyHandler, ScheduledEvent, ScheduledHandler } from 'aws-la
 import * as cookie from 'cookie'
 import { getConfig } from './data.js'
 import type { StatusParams } from '../definitions.js'
-import { newRpcError, newRpcSuccess } from '../rpc.js'
+import { newRpcError, newRpcSuccess } from './rpc.js'
 import { EditorService } from './service.js'
 import { cleanupAbandonedEditors } from './cleanup.js'
 import './polyfill.js'
@@ -49,6 +49,9 @@ const apiHandler: APIGatewayProxyHandler = async (event: any) => {
     })
 
     try {
+        if (params.archiveMessage) {
+            await service.archive(params.archiveMessage)
+        }
         const status = await service.update()
         return {
             statusCode: 201,

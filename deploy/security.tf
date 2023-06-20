@@ -183,7 +183,10 @@ resource "aws_iam_role_policy" "kinetic_workspaces_enclave" {
         Action = [
           "s3:GetObject",
           "s3:ListBucket",
-          "s3:GetBucketLocation"
+          "s3:GetBucketLocation",
+          "s3:PutObject",
+          "s3:ListMultipartUploadParts",
+          "s3:AbortMultipartUpload"
         ],
         Resource = "${aws_s3_bucket.kinetic_workspaces_archives.arn}/*"
       },
@@ -234,7 +237,7 @@ resource "aws_iam_role_policy_attachment" "role-policy-attachment" {
 
 
 output "editor_ami_id" {
-  value = data.aws_ami.kinetic_workspaces.id
+  value = data.aws_ami.kinetic_workspaces_editor.id
 }
 
 

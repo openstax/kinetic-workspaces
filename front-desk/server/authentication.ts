@@ -28,6 +28,7 @@ export async function newEditorCookie(worker: WorkerModel, config: ConfigModel) 
         console.log("SET USERNAME: ", worker.userName)
     }
     const expires = dayjs().add(3, 'month').format('ddd, DD MMM YYYY H:MM:ss') + ' GMT' // rstudio format in core/http/Util.cpp
+
     const hmac = crypto
         .createHmac('sha256', config.rstudioCookieSecret + String.fromCharCode(0x0A))
         .update(worker.userName + expires).digest('base64')

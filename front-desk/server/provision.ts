@@ -2,7 +2,7 @@ import { NodeSSH } from 'node-ssh'
 import type { WorkerModel } from './data.js'
 import { Worker, getConfig } from './data.js'
 import { decodeVar } from './string.js'
-import { newRpcError } from '../rpc.js'
+import { newRpcError } from './rpc.js'
 import { findOrCreateEFSAccessPoint, getProfileUrl } from './aws.js'
 import { Analysis, PosixUserId } from '../definitions.js'
 
@@ -24,7 +24,7 @@ async function provisionProfile(worker: WorkerModel, analysis: Analysis) {
     const ssh = new NodeSSH()
     await ssh.connect({
         host: worker.hostName,
-        username: 'admin',
+        username: 'ubuntu',
         privateKey: decodeVar(config.editorImageSSHKey),
     })
     const userName = worker.userName
@@ -35,21 +35,21 @@ async function provisionProfile(worker: WorkerModel, analysis: Analysis) {
         echo 127.0.7.1 ${hostName} ${worker.hostName} | sudo tee -a /etc/hosts && \\
         echo ${hostName} | sudo tee -a /etc/hostname && sudo hostname ${hostName} && \\
         sudo addgroup --gid ${PosixUserId} ${userName} && \\
-        sudo adduser --disabled-password --home /home/kinetic --uid ${PosixUserId} --gid ${PosixUserId} --shell /bin/false --gecos 'Kinetic Workspace User' ${userName} && \\
-        sudo ${MOUNT}${worker.accessPointId} ${config.efsAddress}:/ /home/kinetic
+        sudo adduser --disabled-password --home /home/editor --uid ${PosixUserId} --gid ${PosixUserId} --shell /bin/false --gecos 'Kinetic Workspace User' ${userName} && \\
+        sudo ${MOUNT}${worker.accessPointId} ${config.efsAddress}:/ /home/editor
     `
     const resp = await ssh.execCommand(cmd)
     if (resp.code != 0) {
         console.warn(`exit status: ${resp.code}`, cmd, resp.stdout, resp.stderr)
         throw new Error(resp.stderr)
     }
-    const fresh = await ssh.execCommand('[ ! -d /home/kinetic/kinetic ]')
+    const fresh = await ssh.execCommand('[ ! -d /home/editor/kinetic ]')
     if (fresh.code == 0) {
         const profileUrl = await getProfileUrl()
         console.log({ profileUrl })
         const resp = await ssh.execCommand(`
-            wget -qO- "${profileUrl}" | sudo -u ${userName} tar xz -C /home/kinetic && \\
-            echo "ANALYSIS_API_KEY=${analysis.api_key}" >> /home/kinetic/.Renviron
+            wget -qO- "${profileUrl}" | sudo -u ${userName} tar xz -C /home/editor && \\
+            echo "ANALYSIS_API_KEY=${analysis.api_key}" >> /home/editor/.Renviron
         `)
         if (resp.code != 0) {
             throw new Error(resp.stderr)

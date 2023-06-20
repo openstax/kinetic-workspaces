@@ -7,14 +7,10 @@ resource "aws_imagebuilder_container_recipe" "kinetic_workspaces_enclave" {
 
   version        = "0.0.1"
   container_type = "DOCKER"
-  parent_image   = "debian:bullseye-slim"
+  parent_image   = "ubuntu:jammy"
 
   component {
-    component_arn = "arn:aws:imagebuilder:${var.aws_region}:aws:component/update-linux/x.x.x"
-  }
-
-  component {
-    component_arn = aws_imagebuilder_component.kinetic_workspaces_config_files.arn
+    component_arn = aws_imagebuilder_component.kinetic_workspaces_base_config.arn
   }
 
   component {
@@ -120,6 +116,3 @@ resource "aws_iam_role_policy_attachment" "kinetic_workspaces_enclave_image_buil
   policy_arn = aws_iam_policy.kinetic_workspaces_enclave_image_builder_s3.arn
 }
 
-output "enclave_docker_image" {
-  value = aws_imagebuilder_image.kinetic_workspaces_ecr.output_resources
-}

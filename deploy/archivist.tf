@@ -100,7 +100,6 @@ resource "aws_iam_role_policy_attachment" "AWSLambdaVPCAccessExecutionRole" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-
 resource "aws_iam_role_policy" "kinetic_workspaces_archivist_lambda" {
   name_prefix = "ec2-kinetic_workspaces-role-policy-"
   role        = aws_iam_role.kinetic_ws_archivist_lambda.name

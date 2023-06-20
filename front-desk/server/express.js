@@ -11,6 +11,9 @@ async function createServer() {
     const app = express()
     const port = process.env.PORT || 5050
 
+    app.use(express.json())
+    app.use(cookieParser())
+
     // Create Vite server in middleware mode and configure the app type as
     // 'custom', disabling Vite's own HTML serving logic so parent server
     // can take control
@@ -18,13 +21,6 @@ async function createServer() {
         server: { middlewareMode: true },
         appType: 'custom'
     })
-
-    // Use vite's connect instance as middleware. If you use your own
-    // express router (express.Router()), you should use router.use
-    app.use(vite.middlewares)
-
-    app.use(express.json())
-    app.use(cookieParser())
 
     app.put('/status', async (req, res) => {
         const { handler } = await vite.ssrLoadModule('/server/express-adapter')
@@ -36,6 +32,10 @@ async function createServer() {
             return res.status(500).send({ error: true })
         }
     })
+
+    // Use vite's connect instance as middleware. If you use your own
+    // express router (express.Router()), you should use router.use
+    app.use(vite.middlewares)
 
     app.get('/editor/', async (req, res) => {
         const url = req.originalUrl

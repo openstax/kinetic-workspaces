@@ -30,6 +30,8 @@ if [[ $# -eq 1 ]]; then
     cookie_name=oxa
     export TF_VAR_base_domain_name=kinetic.openstax.org
   fi
+  heroku_enclave_api_key=$(heroku config:get ENCLAVE_API_KEY --app $app)
+  export TF_VAR_enclave_api_key=${heroku_enclave_api_key:-"ec_dev_1bG346BDBGEsG5Dck8H6sAiRBJ7Vt52Vwcno"}
   export TF_VAR_base_domain_name=$env.kinetic.openstax.org
   export TF_VAR_environment_name=$env
   export TF_VAR_sso_cookie_name=$cookie_name

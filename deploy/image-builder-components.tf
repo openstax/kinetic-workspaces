@@ -12,11 +12,11 @@ resource "aws_imagebuilder_component" "kinetic_workspaces_install_r_and_pkgs" {
       name = "build"
       steps = [{
         action    = "ExecuteBash"
-        name      = "download_and_install_kinetic_workspaces"
+        name      = "install_r_and_pkgs"
         onFailure = "Abort"
         inputs = {
           commands = [
-            "export DEBIAN_FRONTEND=noninteractive",
+            "export DEBIAN_FRONTEND=noninteractive TZ=America/Chicago",
             "sudo bash /tmp/install_r_and_pkgs ${aws_s3_bucket.kinetic_workspaces_conf_files.id}",
           ]
         }
@@ -25,27 +25,41 @@ resource "aws_imagebuilder_component" "kinetic_workspaces_install_r_and_pkgs" {
   })
 }
 
-resource "aws_imagebuilder_component" "kinetic_workspaces_config_files" {
-  name     = "kinetic_workspaces_config_files"
+resource "aws_imagebuilder_component" "kinetic_workspaces_base_config" {
+  name     = "kinetic_workspaces_base_config"
   platform = "Linux"
   version  = "0.0.1"
 
   depends_on = [
 
   ]
+
   data = yamlencode({
     schemaVersion = 1.0
     phases = [{
       name = "build"
-      steps = [{
-        action    = "S3Download"
-        name      = "download_and_install_conf_files"
-        onFailure = "Abort"
-        inputs = [{
-          source      = "s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/*",
-          destination = "/tmp/",
-        }]
-      }]
+      steps = [
+        {
+          action    = "ExecuteBash"
+          name      = "install_base_packages"
+          onFailure = "Abort"
+          inputs = {
+            commands = [
+              "sudo apt-get update",
+              "DEBIAN_FRONTEND=noninteractive TZ=America/Chicago sudo -E apt-get install -y curl wget git vim awscli",
+            ]
+          }
+        },
+        {
+          action    = "S3Download"
+          name      = "download_conf_files"
+          onFailure = "Abort"
+          inputs = [{
+            source      = "s3://${aws_s3_bucket.kinetic_workspaces_conf_files.id}/configs/*",
+            destination = "/tmp/",
+          }]
+        }
+      ]
     }]
   })
 }
@@ -65,17 +79,17 @@ resource "aws_imagebuilder_component" "kinetic_install_docker_build" {
         onFailure = "Abort"
         inputs = {
           commands = [
-            "export DEBIAN_FRONTEND=noninteractive",
+            "export DEBIAN_FRONTEND=noninteractive TZ=America/Chicago",
             "ls /tmp",
             "sudo bash /tmp/install_ruby",
-            "sudo apt-get install -y ca-certificates curl gnupg",
+            "sudo apt-get install -y ca-certificates gnupg",
             "sudo install -m 0755 -d /etc/apt/keyrings",
             "curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
             "sudo chmod a+r /etc/apt/keyrings/docker.gpg",
-            "echo deb [signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bullseye stable | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
+            "echo deb [signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
             "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -",
             "sudo apt-get update",
-            "sudo apt-get install -y nodejs zstd docker-ce docker-buildx-plugin docker-compose-plugin",
+            "sudo apt-get install -y nodejs zstd zip docker-ce docker-buildx-plugin docker-compose-plugin",
             "sudo npm install -g dockerode @aws-sdk/client-ecr @aws-sdk/client-ec2 @aws-sdk/client-s3 @aws-sdk/client-sfn",
           ]
         }
@@ -84,8 +98,8 @@ resource "aws_imagebuilder_component" "kinetic_install_docker_build" {
   })
 }
 
-resource "aws_imagebuilder_component" "ec2_kinetic_workspaces" {
-  name     = "configure_ec2_kinetic_workspaces"
+resource "aws_imagebuilder_component" "kinetic_workspaces_editor" {
+  name     = "kinetic_workspaces_editor"
   platform = "Linux"
   version  = "1.0.0"
 
@@ -101,16 +115,13 @@ resource "aws_imagebuilder_component" "ec2_kinetic_workspaces" {
       name = "build"
       steps = [{
         action    = "ExecuteBash"
-        name      = "download_and_install_kinetic_workspaces"
+        name      = "workspaces_rstudio_editor"
         onFailure = "Abort"
         inputs = {
           commands = [
             "export DEBIAN_FRONTEND=noninteractive",
-            "sudo apt-get update",
-            "sudo apt-get install -y git gdebi-core ruby-full build-essential binutils nginx-light certbot python3-certbot-dns-route53",
+            "sudo apt-get install -y gdebi-core ruby-full build-essential binutils nginx-light certbot python3-certbot-dns-route53",
             "sudo gem install aws-sdk-s3",
-            "sudo wget --no-verbose -O /tmp/ssm.deb https://s3.${var.aws_region}.amazonaws.com/amazon-ssm-${var.aws_region}/latest/debian_amd64/amazon-ssm-agent.deb",
-            "sudo dpkg -i /tmp/ssm.deb",
             "cd /tmp && git clone https://github.com/aws/efs-utils",
             "cd /tmp/efs-utils && ./build-deb.sh && sudo apt-get -y install ./build/amazon-efs-utils*deb",
             "sudo bash /tmp/install_rstudio ${local.domain_name} ${random_id.rstudio_cookie_key.hex}",

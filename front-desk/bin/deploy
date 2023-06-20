@@ -10,9 +10,9 @@ export AWS_PAGER="" # silence cli using "less" to display output
 
 ./bin/build
 
-aws s3 cp lambda/bundled.zip s3://kinetic-workspaces-lambdas/front-desk.zip
+# aws s3 cp lambda/bundled.zip s3://kinetic-workspaces-lambdas/front-desk.zip
 
-aws lambda update-function-code --function-name $LAMBDA --s3-bucket $LAMBDA_BUCKET --s3-key front-desk.zip
+aws lambda update-function-code --function-name $LAMBDA --zip-file fileb://./lambda/bundled.zip
 
 sleep 5
 

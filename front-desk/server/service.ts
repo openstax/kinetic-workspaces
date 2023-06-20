@@ -1,10 +1,10 @@
 import { randomUUID } from 'crypto'
-import { getAnalysis } from './analysis.js'
+import { getAnalysis, notifyStartEnclaveRun } from './analysis.js'
 import { Worker } from './data.js'
 import { newEditorCookie } from './authentication.js'
 import { Analysis, DocumentStatus, MAX_INACTIVY_TIME, POLLING_RATE } from '../definitions.js'
 import type { ConfigModel, WorkerModel } from './data.js'
-import { startEc2Instance, getEc2Instance, assignHostDNS } from './aws.js'
+import { startEc2Instance, getEc2Instance, assignHostDNS, startWorkspaceArchive } from './aws.js'
 import { reapWorker } from './cleanup.js'
 import { validateUserProfile } from './provision.js'
 
@@ -86,8 +86,21 @@ export class EditorService {
         return { isActive: true, hostName: worker.hostName }
     }
 
+    async archive(message: string): Promise<void> {
+//        const analysis = await this.analysis()
+        console.log("ARCRUN", { message })
+        const run = await notifyStartEnclaveRun(this.args.analysisId, message)
+
+        startWorkspaceArchive({
+            key: run.api_key,
+            analysis_id: this.args.analysisId,
+            analysis_api_key: run.analysis_api_key,
+        })
+    }
+
     async update(): Promise<WorkerState> {
         const analysis = await this.analysis()
+
         const worker = await this.worker()
 
         if (this.isClosed) {

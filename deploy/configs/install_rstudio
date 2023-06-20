@@ -1,13 +1,17 @@
 #!/bin/bash
 
+set -e
+
 DOMAIN=$1
 KEY=$2
 
 echo domain is $DOMAIN
 
-wget --no-verbose -O /tmp/rstudio.deb  https://download2.rstudio.org/server/bionic/amd64/rstudio-server-2023.03.1-446-amd64.deb
+apt-get install -y r-base
 
+curl -fsSL https://download2.rstudio.org/server/jammy/amd64/rstudio-server-2023.06.0-421-amd64.deb --output /tmp/rstudio.deb
 gdebi -n /tmp/rstudio.deb
+
 
 cat << EOF > /etc/rstudio/rserver.conf
 www-frame-origin=any
@@ -17,3 +21,8 @@ EOF
 perl -p -i -e "s|</head>|<script src=\"https://$DOMAIN/assets/kinetic-rstudio-editor-patch.js\"></script>\n</head>|" /usr/lib/rstudio-server/www/index.htm
 
 echo $KEY > /var/lib/rstudio-server/secure-cookie-key
+
+cat << EOF > /etc/rstudio/logging.conf
+[*]
+log-level=debug
+EOF

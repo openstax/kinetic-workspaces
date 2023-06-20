@@ -1,4 +1,6 @@
 import * as React from 'react'
+import { CommitMessagPrompt } from './message'
+
 
 type TargetedMessageEventData = {
     target?: string
@@ -7,11 +9,11 @@ type TargetedMessageEventData = {
     payload?: object
 }
 
-
-
 class Handler {
     iframe: HTMLIFrameElement
     iframeSource: string
+
+    submitRunHandler?: () => void
 
     constructor(iframe: HTMLIFrameElement, source: string) {
         this.iframe = iframe
@@ -33,7 +35,10 @@ class Handler {
     }
 
     handle_buttonClick({ id }) {
-        console.log(`Button click: ${id}`)
+        console.log(`button click: ${id}`)
+        if (id == 'requestEnclaveRun' && this.submitRunHandler) {
+            this.submitRunHandler()
+        }
     }
 
     handle_ready() {
@@ -63,8 +68,13 @@ class Handler {
 }
 
 
-export const RStudioIframe:React.FC<{ url: string }> = ({ url }) => {
+export const RStudioIframe:React.FC<{ url: string, analysisId: number }> = ({ url, analysisId }) => {
     const [handler, setHandlerInstance] = React.useState<Handler | null>(null)
+
+    // const onRun = async (message: string) => {
+    //     return await submitCodeRun(analysisId, message)
+    // }
+
     const setHandler = (el?: HTMLIFrameElement | null) => {
         if (el === handler?.iframe) return
         if (handler) handler.disconnect()
@@ -72,12 +82,10 @@ export const RStudioIframe:React.FC<{ url: string }> = ({ url }) => {
             setHandlerInstance(new Handler(el, url))
         }
     }
-    // React.useEffect(() => {
-
-    // }, [])
 
     return (
         <div style={{ width: '100vw', height: '100vh' }}>
+            <CommitMessagPrompt handler={handler} analysisId={analysisId} />
             <iframe style={ { border: 0, width: '100vw', height: '100vh' } } src = {url} ref={setHandler} />
         </div>
     )

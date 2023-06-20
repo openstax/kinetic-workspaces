@@ -11,6 +11,8 @@ BUCKET=$1
 
 NCPUS=`nproc --all`
 
+export R_LIBS_SITE=/usr/local/lib/R/site-library/:/usr/lib/R/site-library:/usr/lib/R/library
+
 echo building using $NCPUS cpu count.
 echo using files from $BUCKET
 
@@ -74,7 +76,9 @@ apt_install \
     r-cran-docopt \
     r-cran-littler
 
-ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r
+if [! -e /usr/local/bin/install2.r ]; then
+    ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r
+fi
 
 install2.r --error --skipinstalled -n "$NCPUS" \
     janitor \
@@ -95,26 +99,16 @@ install2.r --error --skipinstalled -n "$NCPUS" \
     careless \
     RSQLite \
     renv \
+    httr \
+    R6 \
+    base64enc \
+    stringr \
     devtools
 
-# dbplyr \
-#     DBI \
-#     dtplyr \
-#     devtools \
-#     nycflights13 \
-#     Lahman \
-#     RSQLite \
-#     fst
+# leave available for later install if needed
+cp /tmp/kinetic-r-api.tar.gz /usr/local/src/
 
-## a bridge to far? -- brings in another 60 packages
-# install2.r --error --skipinstalled -n "$NCPUS" tidymodels
-
-# Check the tidyverse core packages' version
-echo -e "Check the tidyverse package...\n"
-R -q -e "library(tidyverse)"
-echo -e "\nInstall tidyverse package, done!"
-
-sudo R -e 'install.packages("/tmp/kinetic-r-api.tar.gz", repos = NULL, type = "source")'
+R -e 'install.packages("/tmp/kinetic-r-api.tar.gz", repos = NULL, type = "source", lib = "/usr/local/lib/R/site-library")'
 
 # Clean up
 ## Strip binary installed lybraries from RSPM

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+yarn install
+
+for ts in run-ec2-task.ts analyze-and-build.ts enclave-run.ts
+do
+  yarn run esbuild --platform=node --bundle $ts --outdir=dist  --loader:.sh=text \
+    --external:'@aws-sdk/*' \
+    --external:'dockerode' \
+    --external:'ssh2' \
+    --external:'crypto' \
+    --external:'ssh2/cpu-features'
+done

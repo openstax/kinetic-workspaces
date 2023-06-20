@@ -28,16 +28,11 @@ class RStudioButtons {
   }
 
   removeButtons() {
-    [
-      '#rstudio_container > div:nth-child(2) > div > div:nth-child(2) > div > div > table > tbody > tr > td > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td:nth-child(4)',
-      '#rstudio_container > div:nth-child(2) > div > div:nth-child(2) > div > div > table > tbody > tr > td > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td:nth-child(2)',
-    ].forEach(s => {
-      document.querySelector(s).remove()
-    })
-
     const quitBtn = document.querySelector('#rstudio_tb_quitsession')
     this.buttonsContainer = quitBtn.parentElement
-    quitBtn.remove()
+    quitBtn.closest('table').querySelectorAll('button,.gwt-Label').forEach((el) => {
+      el.remove()
+    })
   }
 
 

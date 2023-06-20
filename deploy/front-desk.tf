@@ -1,46 +1,42 @@
-# data "archive_file" "kinetic_ws_front_desk" {
-#   type = "zip"
-
-#   source_dir  = "${path.module}/../front-desk"
-#   output_path = "${path.module}/kinetic-workspaces-front-desk.zip"
-#   # excludes = ["dist/client"]
-# }
 
 locals {
-  front_desk_archive = "${path.module}/../front-desk/lambda/bundled.zip"
+  front_desk_sha    = sha1(join("", [for f in fileset("${path.module}/../front-desk/editor", "*") : filesha1("${path.module}/../front-desk/editor/${f}")]))
+  lambda_source_sha = sha1(join("", [for f in fileset("${path.module}/../front-desk/server", "*") : filesha1("${path.module}/../front-desk/server/${f}")]))
 }
 
-# resource "null_resource" "build_front_desk_lambda" {
-#   triggers = {
+data "archive_file" "kinetic_ws_front_desk" {
+  type        = "zip"
+  output_path = "${path.module}/../front-desk/lambda/bundled.zip"
+  source_dir  = "${path.module}/../front-desk/lambda"
+  depends_on  = [null_resource.build_front_desk_lambda]
+}
 
-#   }
-
-#   provisioner "local-exec" {
-#     command = "cd ../front-desk && ./bin/build"
-#   }
-# }
-
-resource "aws_s3_object" "kinetic_ws_front_desk_lambda" {
-  bucket = aws_s3_bucket.kinetic_ws_lambda.id
-
-  key    = "front-desk.zip"
-  source = local.front_desk_archive
-  tags = {
-    Name = "Kinetic Workspaces Front Desk"
+resource "null_resource" "build_front_desk_lambda" {
+  triggers = {
+    src_sha        = local.lambda_source_sha
+    front_desk_sha = local.front_desk_sha
   }
-  #  data.archive_file.kinetic_ws_front_desk.output_path
 
-  etag = filemd5(local.front_desk_archive)
+  provisioner "local-exec" {
+    command = "cd ${path.module}/../front-desk && ./bin/build"
+  }
 }
 
-resource "aws_s3_bucket" "kinetic_ws_lambda" {
-  bucket = "kinetic-workspaces-lambdas"
+resource "aws_s3_object" "kinetic_ws_fd_asset_files" {
+  for_each    = fileset("${path.module}/../front-desk/dist/assets", "*")
+  bucket      = aws_s3_bucket.kinetic_ws_assets.id
+  key         = "/assets/${each.value}"
+  source      = "${path.module}/../front-desk/dist/assets/${each.value}"
+  source_hash = local.front_desk_sha
 }
 
-# resource "aws_s3_bucket_acl" "kinetic_lambda" {
-#   bucket = aws_s3_bucket.kinetic_ws_lambda.id
-#   acl    = "private"
-# }
+resource "aws_s3_object" "kinetic_ws_fd_index" {
+  bucket      = aws_s3_bucket.kinetic_ws_assets.id
+  key         = "/editor/index.html"
+  source      = "${path.module}/../front-desk/dist/index.html"
+  source_hash = local.front_desk_sha
+}
+
 
 resource "aws_apigatewayv2_api" "kinetic_ws_front_desk" {
   name          = "kinetic-ws-front-desk"
@@ -77,14 +73,13 @@ resource "aws_apigatewayv2_stage" "kinetic_ws_front_desk" {
 resource "aws_lambda_function" "kinetic_ws_front_desk" {
   function_name = "KineticWorkspacesFrontDesk"
 
-  s3_bucket = aws_s3_bucket.kinetic_ws_lambda.id
-  s3_key    = aws_s3_object.kinetic_ws_front_desk_lambda.key
-
   timeout = 120
   runtime = "nodejs18.x"
   handler = "lambda.handler"
 
-  source_code_hash = filebase64sha256(local.front_desk_archive)
+  filename = data.archive_file.kinetic_ws_front_desk.output_path //local.front_desk_archive
+
+  source_code_hash = data.archive_file.kinetic_ws_front_desk.output_base64sha256 // output_path) //local.front_desk_archive)
 
   role = aws_iam_role.kinetic_workspace_lambda.arn
   environment {
@@ -162,14 +157,16 @@ resource "aws_dynamodb_table_item" "kinetic_ws_front_desk_config" {
     "awsRegion": { "S": "${var.aws_region}" },
     "efsAddress": { "S": "${aws_efs_file_system.kinetic_workspaces.id}.efs.${var.aws_region}.amazonaws.com" },
     "s3ConfigBucket": { "S": "${aws_s3_bucket.kinetic_workspaces_conf_files.id}" },
+    "s3ArchiveBucket": { "S": "${aws_s3_bucket.kinetic_workspaces_archives.id}" },
     "dnsZoneId": { "S": "${aws_route53_zone.kinetic_workspaces.id}" },
     "dnsZoneName": { "S": "${aws_route53_zone.kinetic_workspaces.name}" },
-
+    "archiveSFNArn": { "S": "${aws_sfn_state_machine.kinetic_archive.arn}" },
     "SecurityGroupIds" : { "SS": [ "${aws_security_group.kinetic_workspaces.id}" ] },
     "InstanceType": { "S": "t3a.micro" },
     "SubnetId": { "S": "${aws_subnet.kinetic_workspaces.id}" },
-    "ImageId": { "S": "${data.aws_ami.kinetic_workspaces.id}" },
-    "KeyName": { "S": "${aws_key_pair.kinetic_workspaces.key_name}" }
+    "ImageId": { "S": "${data.aws_ami.kinetic_workspaces_editor.id}" },
+    "KeyName": { "S": "${aws_key_pair.kinetic_workspaces.key_name}" },
+    "enclaveApiKey": { "S": "${var.enclave_api_key}" }
    }
 ITEM
 }

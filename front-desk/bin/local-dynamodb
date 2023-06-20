@@ -31,6 +31,7 @@ aws dynamodb list-tables --endpoint-url http://localhost:8000 | grep -q $TABLE
 
     cd ../deploy
 
-    terraform output -raw front_desk_config_entry > /tmp/kws-config.json
+    terraform output -raw front_desk_config_entry | jq '.enclaveApiKey.S = "ec_dev_1bG346BDBGEsG5Dck8H6sAiRBJ7Vt52Vwcno" | .kineticURL.S = "http://localhost:4006/" | .ssoCookieName.S="stubbed_user_uuid"' > /tmp/kws-config.json
+
     aws dynamodb put-item --endpoint-url http://localhost:8000 --table-name KineticWSFrontDesk --item file:///tmp/kws-config.json
 fi

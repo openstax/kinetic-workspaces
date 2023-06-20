@@ -3,6 +3,7 @@ export type DocumentStatus = 'visible' | 'hidden' | 'closed'
 export type StatusParams = {
     analysisId: number
     documentStatus: DocumentStatus
+    archiveMessage?: string
 }
 
 export type EditorState = {
@@ -20,6 +21,8 @@ export interface RPCError {
     message: string
     error: true
 }
+
+export type RPCResponse<D extends Record<string, any> = object> = RPCSuccess<D> | RPCError
 
 export interface User {
     id: number;
@@ -39,7 +42,7 @@ export interface User {
     }>;
 }
 
-export interface Analysis {
+export type Analysis = {
     id: number;
     name: string;
     description: string;
@@ -47,7 +50,20 @@ export interface Analysis {
     api_key: string;
 }
 
+export type AnalysisRunResponse = {
+    api_key: string
+    started_at: string
+    analysis_api_key: string
+    is_completed: boolean
+}
+
 export const PosixUserId = 1010
 
 export const MAX_INACTIVY_TIME = 1000 * 60 * 30 // minutes
 export const POLLING_RATE = 1000 * 5 //  seconds
+
+export type StartArchiveArgs = {
+    key: string
+    analysis_id: number
+    analysis_api_key: string
+}

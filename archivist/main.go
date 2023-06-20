@@ -23,13 +23,13 @@ type Event struct {
 	AnalysisID     int64  `json:"analysis_id"`
 	EnclaveApiKey  string `json:"enclave_api_key"`
 	AnalysisApiKey string `json:"analysis_api_key"`
-	SrcDirectory   string `json:"src_directory"`
-	Bucket         string `json:"bucket"`
-	Destination    string `json:"destination"`
+	//	SrcDirectory   string `json:"src_directory"`
+	Bucket string `json:"bucket"`
+	//	Destination string `json:"destination"`
 }
 
 func (evt *Event) BucketPath() *string {
-	return aws.String(fmt.Sprintf("%s/%s.tar.zst", evt.Destination, evt.Key))
+	return aws.String(fmt.Sprintf("review/%d/%s/archive.tar.zst", evt.AnalysisID, evt.Key))
 }
 
 type Output struct {
@@ -42,15 +42,17 @@ type Output struct {
 
 func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 
-	fmt.Printf("hello world, reading %s writing to %s\n", evt.SrcDirectory, *evt.BucketPath())
+	srcDirectory := fmt.Sprintf("/mnt/efs/editor/%d", evt.AnalysisID)
+
+	fmt.Printf("hello world, reading %s writing to %s\n", srcDirectory, *evt.BucketPath())
 
 	reader, writer := io.Pipe()
 
-	fmt.Println(listDirectoryContents(evt.SrcDirectory))
+	fmt.Println(listDirectoryContents(srcDirectory))
 
 	opts := archiver.FromDiskOptions{FollowSymlinks: false, ClearAttributes: true}
 	files, err := archiver.FilesFromDisk(&opts, map[string]string{
-		evt.SrcDirectory: "",
+		srcDirectory: "archive",
 	})
 
 	if err != nil {
@@ -60,7 +62,7 @@ func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 	n := 0
 	for i := range files {
 		ext := strings.ToLower(filepath.Ext(files[i].NameInArchive))
-		if ext != ".git" && ext != ".csv" {
+		if ext != ".git" {
 			files[n] = files[i]
 			n += 1
 		}
@@ -102,7 +104,7 @@ func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 
 	// Check if an error occurred in the goroutine
 	if errGoroutine := <-errChan; errGoroutine != nil {
-		return nil, fmt.Errorf("failed to read %s: %s", evt.SrcDirectory, errGoroutine.Error())
+		return nil, fmt.Errorf("failed to read %s: %s", srcDirectory, errGoroutine.Error())
 	}
 
 	output := Output{

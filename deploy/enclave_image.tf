@@ -10,7 +10,6 @@ resource "aws_imagebuilder_distribution_configuration" "kinetic_enclave_ami" {
   }
 }
 
-
 resource "aws_imagebuilder_image_pipeline" "kinetic_enclave" {
   name             = "kinetic_enclave_image_pipeline"
   image_recipe_arn = aws_imagebuilder_image_recipe.kinetic_enclave.arn
@@ -21,11 +20,7 @@ resource "aws_imagebuilder_image_pipeline" "kinetic_enclave" {
 
 resource "aws_imagebuilder_image_recipe" "kinetic_enclave" {
   component {
-    component_arn = aws_imagebuilder_component.kinetic_workspaces_config_files.arn
-  }
-
-  component {
-    component_arn = "arn:aws:imagebuilder:${var.aws_region}:aws:component/update-linux/x.x.x"
+    component_arn = aws_imagebuilder_component.kinetic_workspaces_base_config.arn
   }
 
   component {

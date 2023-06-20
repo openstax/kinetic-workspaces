@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+if [ "$UID" -ne 0 ]
+    then echo "Please run this script as root user"
+    exit
+fi
+
+apt-get -y install build-essential zlib1g-dev libssl-dev libreadline6-dev libyaml-dev git sqlite3 libsqlite3-dev
+
+git clone https://github.com/rbenv/rbenv.git /usr/local/rbenv
+
+mkdir /usr/local/rbenv/plugins
+
+cat <<'EOF' >> /etc/bash.bashrc
+export RBENV_ROOT=/usr/local/rbenv
+export PATH="$RBENV_ROOT/bin:$PATH"
+eval "$(rbenv init -)"
+export GEM_HOME="$HOME/.gem"
+export GEM_PATH="$HOME/.gem"
+export PATH="$HOME/.gem/bin:$PATH"
+EOF
+
+export RBENV_ROOT=/usr/local/rbenv
+export PATH="$RBENV_ROOT/bin:$PATH"
+eval "$(rbenv init -)"
+
+curl -fsSL https://github.com/rbenv/rbenv-installer/raw/HEAD/bin/rbenv-installer | bash
+
+rbenv install 3.2.2
+rbenv rehash
+rbenv global 3.2.2
+gem update --system
+gem install rbenv-rehash docker-api aws-sdk-s3 ox

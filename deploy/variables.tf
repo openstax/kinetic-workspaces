@@ -46,6 +46,11 @@ variable "subDomainName" {
   default = "workspaces"
 }
 
+variable "enclave_api_key" {
+  description = "The key to access the rails server"
+  sensitive   = true
+}
+
 variable "sso_cookie_name" {
   description = "The name of the OpenStax session cookie"
   sensitive   = true

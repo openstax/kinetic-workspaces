@@ -26,4 +26,5 @@ export type AnalyzeBuildEventOutput = {
 export type RunPayload =  EventInput & {
     task_token: string
     region: string
+    base_image: string
 }

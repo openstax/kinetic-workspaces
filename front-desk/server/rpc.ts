@@ -1,6 +1,6 @@
-import type { ErrorTypes } from '@nathanstitt/sundry'
+import type { ErrorTypes } from '@nathanstitt/sundry/base'
 
-import type { RPCSuccess, RPCError, StatusParams, EditorState } from './definitions.js'
+import type { RPCSuccess, RPCError, StatusParams, EditorState } from '../definitions.js'
 
 export function isRPCError(err: any): err is RPCError {
     return typeof err === 'object' && err.error === true
@@ -14,7 +14,7 @@ export function newRpcError(err: ErrorTypes, code?: string): RPCError {
     return {
         code,
         error: true,
-        message: typeof err === 'object' && err.message ? err.message : String(err),
+        message: typeof err === 'object' && err?.message ? err?.message : String(err || 'Error'),
     }
 }
 
@@ -30,14 +30,19 @@ export function newRpcSuccess<D extends Record<string, any>>(
 
 type ReturnTypes = RPCError | RPCSuccess<EditorState>
 
-export async function updateWorkspaceStatus(params: StatusParams): Promise<ReturnTypes> {
+const request = async (params: any) => {
     const resp = await fetch(`/status`, {
         method: 'PUT',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
     })
-    if (!resp.ok) {
-        return newRpcError(resp.statusText)
-    }
-    return await resp.json() as ReturnTypes
+    return await resp.json()
+}
+
+export async function updateWorkspaceStatus(params: StatusParams): Promise<ReturnTypes> {
+    return await request(params) as ReturnTypes
+}
+
+export async function submitCodeRun(analysisId: number, archiveMessage: string): Promise<ReturnTypes> {
+    return await request({ analysisId, archiveMessage, isActive: true }) as ReturnTypes
 }

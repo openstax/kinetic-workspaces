@@ -2,15 +2,15 @@ import {
     EC2Client, RunInstancesCommand, RunInstancesCommandInput, DescribeInstancesCommand, Instance,
     TerminateInstancesCommand,
 } from '@aws-sdk/client-ec2'
+import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn"
 import { EFSClient, CreateAccessPointCommand, DescribeAccessPointsCommand, DeleteAccessPointCommand } from '@aws-sdk/client-efs'
 import { Route53Client, ChangeResourceRecordSetsCommand } from '@aws-sdk/client-route-53'
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3"
-import { pick } from '@nathanstitt/sundry'
+import { pick } from '@nathanstitt/sundry/base'
 import { getConfig, WorkerModel } from './data.js'
 import { randomString } from './string.js'
-import { PosixUserId } from '../definitions.js'
-// import { Config } from '@src/config'
+import { PosixUserId, StartArchiveArgs } from '../definitions.js'
 
 let ec2Client: EC2Client | null = null
 export const setEC2Client = (c: any) => ec2Client = c
@@ -154,4 +154,25 @@ export const getProfileUrl = async () => {
         }),
         { expiresIn: 3600 }
     );
+}
+
+
+export const startWorkspaceArchive = async ({ key, analysis_id, analysis_api_key }: StartArchiveArgs) => {
+    const config = await getConfig()
+    const client = new SFNClient({ region: config.awsRegion })
+
+    const response = await client.send(new StartExecutionCommand({
+        name: key,
+        stateMachineArn: config.archiveSFNArn,
+        input: JSON.stringify({
+            key,
+            analysis_id,
+            analysis_api_key,
+            enclave_api_key: config.enclaveApiKey,
+            bucket: config.s3ArchiveBucket,
+        })
+    }))
+    console.log(response)
+    return response.executionArn
+
 }
