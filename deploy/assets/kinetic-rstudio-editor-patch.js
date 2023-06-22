@@ -50,11 +50,11 @@ function onReady() {
   new RStudioButtons()
 }
 
-function waitForBoot(delay = 5000) {
+function waitForBoot(delay = 1000) {
   if (document.querySelector('#rstudio_container')) {
-    setTimeout(onReady, 1000);
+    setTimeout(onReady, 200);
   } else {
-    setTimeout(waitForBoot, () => ready(delay * 2));
+    setTimeout(waitForBoot, () => ready(delay * 1.2));
   }
 }
 

@@ -34,13 +34,17 @@ resource "aws_sfn_state_machine" "kinetic_archive" {
         Comment  = "Run the archivist func."
         Type     = "Task"
         Resource = aws_lambda_function.kinetic_ws_archivist.arn
-        Next     = "analyze and build"
+        Catch = [{
+          ErrorEquals = ["States.All"]
+          Next        = "notify"
+          ResultPath  = "$.error"
+        }],
+        Next = "analyze and build"
       },
       "analyze and build" = {
         Comment  = "Start EC2 analyze-and-build"
         Type     = "Task"
         Resource = "arn:aws:states:::lambda:invoke.waitForTaskToken"
-
         Parameters = {
           FunctionName = aws_lambda_function.kinetic_ws_run_ec2_task.arn
           Payload = {
@@ -49,12 +53,16 @@ resource "aws_sfn_state_machine" "kinetic_archive" {
             "script"  = "s3://${aws_s3_object.kinetic_enclave_analyze_and_build_script.bucket}/${aws_s3_object.kinetic_enclave_analyze_and_build_script.key}"
           }
         },
+        Catch = [{
+          ErrorEquals = ["States.All"]
+          Next        = "notify"
+          ResultPath  = "$.error"
+        }],
         Next = "run enclave" # TODO: add a pause for manual review
       },
       "run enclave" = {
         Type     = "Task"
         Resource = "arn:aws:states:::lambda:invoke.waitForTaskToken"
-
         Parameters = {
           FunctionName = aws_lambda_function.kinetic_ws_run_ec2_task.arn
           Payload = {
@@ -63,8 +71,19 @@ resource "aws_sfn_state_machine" "kinetic_archive" {
             "script"  = "s3://${aws_s3_object.kinetic_enclave_run_script.bucket}/${aws_s3_object.kinetic_enclave_run_script.key}"
           }
         },
-        End = true
+        Catch = [{
+          ErrorEquals = ["States.All"]
+          Next        = "notify"
+          ResultPath  = "$.error"
+        }],
+        Next = "notify"
+      },
+      "notify" = {
+        Type     = "Task"
+        Resource = aws_lambda_function.kinetic_ws_notify.arn
+        End      = true
       }
+
     }
   })
 
@@ -75,6 +94,7 @@ resource "aws_sfn_state_machine" "kinetic_archive" {
 resource "null_resource" "kinetic_ws_enclave_ts" {
   triggers = {
     run_task_ts = base64sha256(file("${path.module}/../enclave/run-ec2-task.ts"))
+    notify_ts   = base64sha256(file("${path.module}/../enclave/notify.ts"))
     user_data   = base64sha256(file("${path.module}/../enclave/ec2-user-data.sh"))
     build_ts    = base64sha256(file("${path.module}/../enclave/analyze-and-build.ts"))
     ec_run_ts   = base64sha256(file("${path.module}/../enclave/enclave-run.ts"))
@@ -93,6 +113,14 @@ data "archive_file" "kinetic_ws_run_ec2_task_zip" {
   source_file = "${path.module}/../enclave/dist/run-ec2-task.js"
   depends_on  = [null_resource.kinetic_ws_enclave_ts]
 }
+
+data "archive_file" "kinetic_ws_notify_zip" {
+  type        = "zip"
+  output_path = "${path.module}/../enclave/dist/notify.zip"
+  source_file = "${path.module}/../enclave/dist/notify.js"
+  depends_on  = [null_resource.kinetic_ws_enclave_ts]
+}
+
 
 resource "aws_s3_object" "kinetic_enclave_run_script" {
   bucket = aws_s3_bucket.kinetic_workspaces_conf_files.id
@@ -144,3 +172,28 @@ resource "aws_lambda_function" "kinetic_ws_run_ec2_task" {
   }
 }
 
+
+resource "aws_lambda_function" "kinetic_ws_notify" {
+  function_name = "KineticWorkspacesNotify"
+
+  filename = data.archive_file.kinetic_ws_notify_zip.output_path
+
+  timeout     = 60 # 1 minutes, is only starting a ec2 instance, doesn't wait for it to become available
+  memory_size = 512
+  runtime     = "nodejs18.x"
+  handler     = "notify.handler"
+
+  source_code_hash = data.archive_file.kinetic_ws_notify_zip.output_base64sha256
+
+  vpc_config {
+    subnet_ids         = [aws_subnet.kinetic_workspaces.id]
+    security_group_ids = [aws_security_group.kinetic_workspaces.id]
+  }
+  role = aws_iam_role.kinetic_workspace_lambda.arn
+
+  environment {
+    variables = {
+      KINETIC_URL = var.kinetic_url
+    }
+  }
+}

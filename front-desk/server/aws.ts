@@ -8,7 +8,7 @@ import { Route53Client, ChangeResourceRecordSetsCommand } from '@aws-sdk/client-
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3"
 import { pick } from '@nathanstitt/sundry/base'
-import { getConfig, WorkerModel } from './data.js'
+import { getConfig, WorkerModel, IS_PROD } from './data.js'
 import { randomString } from './string.js'
 import { PosixUserId, StartArchiveArgs } from '../definitions.js'
 
@@ -87,9 +87,13 @@ export const clearHostDNS = async (worker: WorkerModel, host: Instance) => {
 
 }
 
+const newSubdomainName = () => {
+    return IS_PROD ? randomString() : `dev-test-editor`
+}
+
 export const assignHostDNS = async (host: Instance) => {
     const Config = await getConfig()
-    const Name = `${randomString()}.${Config.dnsZoneName}`
+    const Name = `${newSubdomainName()}.${Config.dnsZoneName}`
     await getR53Client().send(new ChangeResourceRecordSetsCommand({
         HostedZoneId: Config.dnsZoneId,
         ChangeBatch: {

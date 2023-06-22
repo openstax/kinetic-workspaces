@@ -1,4 +1,5 @@
 locals {
+  assets_path         = "${path.module}/assets"
   assets_s3_origin_id = "KineticWSAssetsS3Origin"
 }
 
@@ -61,22 +62,13 @@ resource "aws_s3_bucket_policy" "kinetic_ws_assets" {
 EOF
 }
 
-resource "aws_s3_object" "kinetic_ws_rstudio_patch" {
-  bucket = aws_s3_bucket.kinetic_ws_assets.id
-
-  key    = "assets/kinetic-rstudio-editor-patch.js"
-  source = "assets/kinetic-rstudio-editor-patch.js"
-
-  etag = filemd5("assets/kinetic-rstudio-editor-patch.js")
+resource "aws_s3_object" "kinetic_ws_rstudio_patches" {
+  for_each = fileset(local.assets_path, "*")
+  bucket   = aws_s3_bucket.kinetic_ws_assets.id
+  key      = "assets/${each.value}"
+  source   = "${local.assets_path}/${each.value}"
+  etag     = filemd5("${local.assets_path}/${each.value}")
 }
-
-# resource "aws_s3_object" "kinetic_workspaces_assets_files" {
-#   for_each    = fileset(local.config_path, "*")
-#   bucket      = aws_s3_bucket.kinetic_workspaces_conf_files.id
-#   key         = "/configs/${each.value}"
-#   source      = "${local.config_path}/${each.value}"
-#   source_hash = filemd5("${local.config_path}/${each.value}")
-# }
 
 
 // Cloudfront Distribution

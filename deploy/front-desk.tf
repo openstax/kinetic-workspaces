@@ -147,8 +147,6 @@ resource "aws_dynamodb_table_item" "kinetic_ws_front_desk_config" {
 
     "environmentName": { "S": "${var.environment_name}" },
     "ssoCookieName": { "S": "${var.sso_cookie_name}" },
-    "ssoCookiePublicKey": { "S": "${urlencode(var.sso_cookie_public_key)}" },
-    "ssoCookiePrivateKey": { "S": "${urlencode(var.sso_cookie_private_key)}" },
     "rstudioCookieSecret": { "S": "${random_id.rstudio_cookie_key.hex}" },
     "kineticURL": { "S": "${var.kinetic_url}" },
     "editorLogin": { "S": "${var.editor_login}"},

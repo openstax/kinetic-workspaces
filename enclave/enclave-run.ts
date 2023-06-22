@@ -8,7 +8,6 @@ import {
 import { execSync } from 'child_process'
 import fs from 'fs'
 
-
 const args = getProcessPayload<RunPayload>()
 
 const dockerImage = IMAGE_REPO + ':' + args.key
@@ -17,23 +16,28 @@ setWorkingDirectory()
     .then(pullDockerImage)
     .then(runDockerImage)
     .then(uploadResults)
-    .then(() => signalSuccess({ ...args, hello: 'world' }))
-    .catch(signalFailure)
+    .then(({ output_path }) => signalSuccess({ ...args, success: true, output_path }))
     .then(shutdownHost)
+    .catch(signalFailure)
 
 async function uploadResults() {
+    console.log('uploading results', process.cwd())
     execSync(`cd output; zip -r ../output.zip *`)
     const archive = new URL(args.archive_path)
     const s3 = new S3Client({ region: args.region })
     const path = archive.pathname
         .replace(/^\//, '')
         .replace(/\/[^\/]*$/, '')
-
+    const Bucket = archive.host.split('.')[0]
+    const Key = `${path}/output.zip`
     await s3.send(new PutObjectCommand({
         Body: fs.createReadStream('output.zip'),
-        Bucket: archive.host.split('.')[0],
-        Key: `${path}/output.zip`,
+        Bucket,
+        Key,
     }))
+    return {
+        output_path: `s3://${Bucket}/${Key}`
+    }
 }
 
 async function pullDockerImage() {

@@ -12,8 +12,8 @@ const MOUNT = 'sudo mount -t efs -o tls,accesspoint='
 
 async function provisionProfile(worker: WorkerModel, analysis: Analysis) {
     const config = await getConfig()
-    console.log("PROVISINING", worker.instanceId, worker.userName)
-
+    console.log("PROVISINING", worker.instanceId, worker.userName, worker.hostName)
+console.log("KEY:", decodeVar(config.editorImageSSHKey))
     if (!worker.accessPointId) {
         worker.accessPointId = await findOrCreateEFSAccessPoint(worker)
         // console.log({ accessPointId })
@@ -27,6 +27,7 @@ async function provisionProfile(worker: WorkerModel, analysis: Analysis) {
         username: 'ubuntu',
         privateKey: decodeVar(config.editorImageSSHKey),
     })
+
     const userName = worker.userName
 
     const hostName = worker.hostName.split('.')[0]

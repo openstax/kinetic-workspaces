@@ -47,9 +47,6 @@ resource "aws_route53_record" "kinetic_workspaces" {
     name                   = aws_cloudfront_distribution.kinetic_workspaces.domain_name
     zone_id                = aws_cloudfront_distribution.kinetic_workspaces.hosted_zone_id
     evaluate_target_health = true
-
-    # name                   = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].target_domain_name
-    # zone_id                = aws_apigatewayv2_domain_name.kinetic_workspaces.domain_name_configuration[0].hosted_zone_id
   }
 }
 

@@ -20,8 +20,8 @@ setWorkingDirectory()
     .then(buildDockerImage)
     .then(uploadImage)
     .then(() => signalSuccess({ ...args, image: DEST_IMAGE_TAG }))
-    .catch(signalFailure)
     .then(shutdownHost)
+    .catch(signalFailure)
 
 async function downloadArchive() {
     const path = new URL(args.archive_path)
@@ -56,11 +56,12 @@ async function buildDockerImage() {
         RUN apt-get install zstd
         WORKDIR /home
         COPY archive editor
+        RUN rm -r editor/.cache
         WORKDIR /home/editor/kinetic
         ENV ANALYSIS_API_KEY=${args.analysis_api_key}
         ENV ENCLAVE_API_KEY=${args.enclave_api_key}
         RUN R -e 'renv::restore()'
-    `.replace(/\n\s+/g, '\n'));
+    `.replace(/\n\s+/g, '\n'))
 
     await followAndLogProgress(`building image`, (logger) => {
         docker.buildImage({

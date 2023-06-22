@@ -17,7 +17,7 @@ export const handler = async (req: express.Request, res: express.Response) => {
             documentStatus: params.documentStatus,
             getCookie(name: string) {
                 // when running in dev mode, we can't access the coookie since it's using the local port
-                if (!IS_PROD) return '00000000-0000-0000-0000-000000000001'
+                if (!IS_PROD && name == 'stubbed_user_uuid') return '00000000-0000-0000-0000-000000000001'
                 return req.cookies[name]
             },
             setCookie(name: string, value: string) {

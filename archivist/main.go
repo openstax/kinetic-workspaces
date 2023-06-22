@@ -62,7 +62,7 @@ func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 	n := 0
 	for i := range files {
 		ext := strings.ToLower(filepath.Ext(files[i].NameInArchive))
-		if ext != ".git" {
+		if ext != ".git" && ext != ".log" {
 			files[n] = files[i]
 			n += 1
 		}

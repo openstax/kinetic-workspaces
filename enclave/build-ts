@@ -2,7 +2,7 @@
 
 yarn install
 
-for ts in run-ec2-task.ts analyze-and-build.ts enclave-run.ts
+for ts in run-ec2-task.ts analyze-and-build.ts enclave-run.ts notify.ts
 do
   yarn run esbuild --platform=node --bundle $ts --outdir=dist  --loader:.sh=text \
     --external:'@aws-sdk/*' \

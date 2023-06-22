@@ -28,3 +28,17 @@ export type RunPayload =  EventInput & {
     region: string
     base_image: string
 }
+
+
+export type NotifySuccessPayload = EventInput & {
+    status: 'success'
+    output_path: string
+    message: string
+    error: never
+}
+
+export type NotifyFailurePayload = EventInput & {
+    status: 'failure'
+    error: string
+}
+export type NotifyPayload = NotifySuccessPayload | NotifyFailurePayload

@@ -20,6 +20,8 @@ EOF
 
 perl -p -i -e "s|</head>|<script src=\"https://$DOMAIN/assets/kinetic-rstudio-editor-patch.js\"></script>\n</head>|" /usr/lib/rstudio-server/www/index.htm
 
+perl -p -i -e "s|</head>|<script src=\"https://$DOMAIN/assets/kinetic-rstudio-inactivity-patch.js\"></script>\n</head>|" /usr/lib/rstudio-server/www/templates/encrypted-sign-in.htm
+
 echo $KEY > /var/lib/rstudio-server/secure-cookie-key
 
 cat << EOF > /etc/rstudio/logging.conf

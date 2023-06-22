@@ -9,3 +9,9 @@ front-desk/lambda
 front-desk/dist
 *.pem
 enclave/temp
+archivist/archivist
+enclave/cache/
+front-desk/*.txt
+*dist*
+*node_modules*
+enclave/source/

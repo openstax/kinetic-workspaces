@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { getAnalysis, notifyStartEnclaveRun } from './analysis.js'
 import { Worker } from './data.js'
-import { newEditorCookie } from './authentication.js'
+import { editorCookie } from './authentication.js'
 import { Analysis, DocumentStatus, MAX_INACTIVY_TIME, POLLING_RATE } from '../definitions.js'
 import type { ConfigModel, WorkerModel } from './data.js'
 import { startEc2Instance, getEc2Instance, assignHostDNS, startWorkspaceArchive } from './aws.js'
@@ -81,8 +81,9 @@ export class EditorService {
         } else if (this.lastActivity > MAX_INACTIVY_TIME) {
             return await this.terminateInstance(worker)
         }
+
         this.args.setCookie('rs-csrf-token', this.args.getCookie('rs-csrf-token') || randomUUID())
-        this.args.setCookie('user-id', await newEditorCookie(worker, this.args.config))
+        this.args.setCookie('user-id', await editorCookie(worker, this.args.config, this.args.getCookie('user-id')))
         return { isActive: true, hostName: worker.hostName }
     }
 

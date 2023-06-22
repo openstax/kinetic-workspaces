@@ -28,7 +28,7 @@ const Form: React.FC<{ onSubmit: FormSubmitHandler<FormVals> }> = ({ onSubmit })
         defaultValues={{ message: '' }}
         onSubmit={onSubmit}
     >
-        <InputField label="Message" name="message" />
+        <InputField label="Message" name="message" autoFocus />
     </EditingForm>
 )
 

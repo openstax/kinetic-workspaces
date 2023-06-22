@@ -1,6 +1,8 @@
 import * as crypto from 'crypto'
 import { compactDecrypt, compactVerify, importSPKI } from 'jose'
 import dayjs from 'dayjs'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
+dayjs.extend(customParseFormat)
 import type { User } from '../definitions.js'
 import { ConfigModel, WorkerModel, Worker, getConfig } from './data.js'
 import { decodeVar, randomString } from './string.js'
@@ -20,14 +22,22 @@ export async function getUserFromCookieValue(value: string) {
     return JSON.parse(payload.toString()) as User
 }
 
+const COOKIE_DATE_FORMAT = 'ddd, DD MMM YYYY HH:MM:ss'
 
-export async function newEditorCookie(worker: WorkerModel, config: ConfigModel) {
+export async function editorCookie(worker: WorkerModel, config: ConfigModel, existingCookie: string) {
+    if (existingCookie) {
+        const date = dayjs(existingCookie, COOKIE_DATE_FORMAT, true)
+        if (date.isAfter(dayjs().add(1, 'week'))) {
+            return encodeURIComponent(existingCookie)
+        }
+    }
     if (!worker.userName) {
         worker.userName = randomString()
         await Worker.update({ id: worker.id, userName: worker.userName })
         console.log("SET USERNAME: ", worker.userName)
     }
-    const expires = dayjs().add(3, 'month').format('ddd, DD MMM YYYY H:MM:ss') + ' GMT' // rstudio format in core/http/Util.cpp
+    // rstudio format in core/http/Util.cpp
+    const expires = dayjs().add(3, 'month').format(COOKIE_DATE_FORMAT) + ' GMT'
 
     const hmac = crypto
         .createHmac('sha256', config.rstudioCookieSecret + String.fromCharCode(0x0A))

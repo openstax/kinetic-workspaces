@@ -56,15 +56,15 @@ variable "sso_cookie_name" {
   sensitive   = true
 }
 
-variable "sso_cookie_private_key" {
-  description = "Private key used to decode OpenStax session cookie"
-  sensitive   = true
-}
+# variable "sso_cookie_private_key" {
+#   description = "Private key used to decode OpenStax session cookie"
+#   sensitive   = true
+# }
 
-variable "sso_cookie_public_key" {
-  description = "Public key used to decode OpenStax session cookie"
-  sensitive   = true
-}
+# variable "sso_cookie_public_key" {
+#   description = "Public key used to decode OpenStax session cookie"
+#   sensitive   = true
+# }
 
 variable "environment_name" {
   description = "Name of environment"

@@ -41,7 +41,7 @@ export type ConfigModel = Entity<typeof DynamoDBSchema.models.Config>
 export const Config = DataTable.getModel('Config')
 
 export const getConfig = async () => {
-    const config = await Config.get({ id: 'kinetic_front_desk_config', sk: process.env.environment || 'staging' }) // environmentName:  })
+    const config = await Config.get({ id: 'kinetic_front_desk_config', sk: process.env.environment || 'staging' })
     if (!config) throw new Error("unconfigured, missing item 'kinetic_front_desk_config' in dyamodb")
     return config
 }
