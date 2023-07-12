@@ -39,10 +39,10 @@ variable "mapPublicIP" {
 variable "wsAssetsSubDomainName" {
   default = "assets"
 }
-variable "baseDomainName" {
+variable "base_domain_name" {
   default = "kinetic.sandbox.openstax.org"
 }
-variable "subDomainName" {
+variable "sub_domain_name" {
   default = "workspaces"
 }
 

@@ -21,15 +21,16 @@ export async function getAnalysis(analysisId: number, ssoCookie: string): Promis
 export async function notifyStartEnclaveRun(analysisId: number, message: string): Promise<AnalysisRunResponse> {
     const config = await getConfig()
 console.log('START', { message, analysisId })
-    const resp = await fetch(`${config.kineticURL}api/v1/researcher/analysis/${analysisId}/runs`, {
+    const resp = await fetch(`${config.kineticURL}api/v1/enclave/runs`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${config.enclaveApiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ run: { message } }),
+        body: JSON.stringify({ message, analysis_id: analysisId }),
     })
 
     console.log(resp.status, config.enclaveApiKey)
 
     if (!resp.ok) throw new Error('unable to start enclave run')
-
-    return await resp.json() as AnalysisRunResponse
+    const run = await resp.json()  as AnalysisRunResponse
+    console.log(run)
+    return run
 }

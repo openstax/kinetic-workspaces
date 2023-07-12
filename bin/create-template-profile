@@ -1,19 +1,32 @@
 #!/bin/bash
 
-set -xe
+set -e
 
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 ID=$1
-export IP=`${DIR}/ip-of-editor-instance $ID`
-echo $IP
+ENV=$2
+
+
+# ensure both ID and ENV were given
+if [ -z "$ID" ] || [ -z "$ENV" ]; then
+  echo "Usage: $0 <instance-id> <staging|production>"
+  exit 1
+fi
+
+export IP=`${DIR}/ip-of-instance editor $ID`
+
+if [ -z "$IP" ]; then
+  echo "No editor instance found with id $ID"
+  exit 1
+fi
 
 $DIR/ssh-to-host $ID -f 'sudo systemctl stop rstudio-server && \
-  sudo tar czf /tmp/editor-home-directory.tar.gz -C /home/kinetic/ . && \
+  sudo tar czf /tmp/editor-home-directory.tar.gz -C /home/editor/ . && \
   sudo systemctl start rstudio-server && \
   sudo chmod a+rw /tmp/editor-home-directory.tar.gz'
 
 export SCP=true
 
-$DIR/ssh-to-host $ID /tmp/editor-home-directory.tar.gz /tmp
+$DIR/ssh-to-host editor $ID /tmp/editor-home-directory.tar.gz /tmp
 
-aws s3 cp /tmp/editor-home-directory.tar.gz s3://kinetic-workspaces-config/configs/editor-home-directory.tar.gz
+aws s3 cp /tmp/editor-home-directory.tar.gz s3://kinetic-$ENV-workspaces-config/provision/editor-home-directory.tar.gz

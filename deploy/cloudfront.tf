@@ -3,22 +3,62 @@ locals {
   assets_s3_origin_id = "KineticWSAssetsS3Origin"
 }
 
+
 ## Assets Bucket
 resource "aws_s3_bucket" "kinetic_ws_assets" {
 
-  bucket = "kinetic-workspaces-assets"
+  bucket = "kinetic${local.env_dash}-workspaces-assets"
 
   tags = {
-    Name        = "kinetic-workspaces-assets"
+    Name        = "kinetic${local.env_dash}-workspaces-assets"
     Environment = "all"
   }
+
 }
 
-resource "aws_s3_bucket_acl" "kinetic_ws_assets" {
+resource "aws_s3_bucket_policy" "kinetic_ws_assets" {
   bucket = aws_s3_bucket.kinetic_ws_assets.id
 
-  acl = "private"
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Sid" : "PublicReadGetObject",
+        "Effect" : "Allow",
+        "Principal" : "*",
+        "Action" : ["s3:GetObject"],
+        "Resource" : "arn:aws:s3:::${aws_s3_bucket.kinetic_ws_assets.id}/*"
+      }
+    ]
+  })
 }
+
+
+# resource "aws_s3_bucket_acl" "kinetic_ws_assets" {
+#   bucket = aws_s3_bucket.kinetic_ws_assets.id
+#   acl    = "public-read"
+#   depends_on = [
+#     aws_s3_bucket_ownership_controls.kinetic_ws_assets,
+#     aws_s3_bucket_public_access_block.kinetic_ws_assets,
+#   ]
+# }
+
+# resource "aws_s3_bucket_ownership_controls" "kinetic_ws_assets" {
+#   bucket = aws_s3_bucket.kinetic_ws_assets.id
+#   rule {
+#     object_ownership = "BucketOwnerPreferred"
+#   }
+# }
+
+# resource "aws_s3_bucket_public_access_block" "kinetic_ws_assets" {
+#   bucket = aws_s3_bucket.kinetic_ws_assets.id
+
+#   block_public_acls       = false
+#   block_public_policy     = false
+#   ignore_public_acls      = false
+#   restrict_public_buckets = false
+# }
+
 
 resource "aws_s3_bucket_cors_configuration" "kinetic_ws_assets" {
   bucket = aws_s3_bucket.kinetic_ws_assets.id
@@ -39,28 +79,28 @@ resource "aws_s3_bucket_website_configuration" "kinetic_workspaces_editor" {
   }
 }
 
-resource "aws_s3_bucket_policy" "kinetic_ws_assets" {
-  bucket = aws_s3_bucket.kinetic_ws_assets.id
+# resource "aws_s3_bucket_policy" "kinetic_ws_assets" {
+#   bucket = aws_s3_bucket.kinetic_ws_assets.id
 
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": "*",
-      "Action": [ "s3:GetObject" ],
-      "Resource": [
-        "${aws_s3_bucket.kinetic_ws_assets.arn}/*.html",
-        "${aws_s3_bucket.kinetic_ws_assets.arn}/editor/*",
-        "${aws_s3_bucket.kinetic_ws_assets.arn}/assets",
-        "${aws_s3_bucket.kinetic_ws_assets.arn}/assets/*"
-      ]
-    }
-  ]
-}
-EOF
-}
+#   policy = <<EOF
+# {
+#   "Version": "2012-10-17",
+#   "Statement": [
+#     {
+#       "Effect": "Allow",
+#       "Principal": "*",
+#       "Action": [ "s3:GetObject" ],
+#       "Resource": [
+#         "${aws_s3_bucket.kinetic_ws_assets.arn}/*.html",
+#         "${aws_s3_bucket.kinetic_ws_assets.arn}/editor/*",
+#         "${aws_s3_bucket.kinetic_ws_assets.arn}/assets",
+#         "${aws_s3_bucket.kinetic_ws_assets.arn}/assets/*"
+#       ]
+#     }
+#   ]
+# }
+# EOF
+# }
 
 resource "aws_s3_object" "kinetic_ws_rstudio_patches" {
   for_each = fileset(local.assets_path, "*")
@@ -77,7 +117,7 @@ resource "aws_cloudfront_distribution" "kinetic_workspaces" {
 
   enabled         = true
   is_ipv6_enabled = true
-  comment         = "Kinetic workspaces"
+  comment         = "${var.environment_name} kinetic workspaces"
 
   origin {
     domain_name = aws_s3_bucket_website_configuration.kinetic_workspaces_editor.website_endpoint

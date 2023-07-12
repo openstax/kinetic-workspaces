@@ -27,7 +27,8 @@ case $ENV in
   staging)
     app=kinetic-web
     cookie_name=oxa_staging
-    domain=staging.kinetic.openstax.org
+    domain=kinetic.sandbox.openstax.org
+    kinetic_url=https://staging.kinetic.openstax.org/
   ;;
   production)
     app=kinetic-web-prod
@@ -42,9 +43,11 @@ esac
 
 heroku_enclave_api_key=$(heroku config:get ENCLAVE_API_KEY --app $app)
 
+
+# terraform init -backend-config=${ENV}.conf
+
 export TF_VAR_base_domain_name=$domain
 export TF_VAR_enclave_api_key=${heroku_enclave_api_key:-"ec_dev_1bG346BDBGEsG5Dck8H6sAiRBJ7Vt52Vwcno"}
-export TF_VAR_base_domain_name=$domain
 export TF_VAR_environment_name=$ENV
 export TF_VAR_sso_cookie_name=$cookie_name
-export TF_VAR_kinetic_url=${url:-"https://$domain/"}
+export TF_VAR_kinetic_url=${kinetic_url:-"https://$domain/"}

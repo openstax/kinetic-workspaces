@@ -1,12 +1,13 @@
 import Stream from 'stream'
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import type { RunPayload } from './types'
+import { createHash } from 'node:crypto'
 import {
     getProcessPayload, setWorkingDirectory, signalSuccess, signalFailure, shutdownHost,
-    followAndLogProgress, ecrAuthorization, docker, IMAGE_REPO,
+    followAndLogProgress, ecrAuthorization, docker, log, postToKinetic, IMAGE_REPO, Timer,
 } from './shared'
 import { execSync } from 'child_process'
 import fs from 'fs'
+import fetch from 'node-fetch'
 
 const args = getProcessPayload<RunPayload>()
 
@@ -16,33 +17,59 @@ setWorkingDirectory()
     .then(pullDockerImage)
     .then(runDockerImage)
     .then(uploadResults)
-    .then(({ output_path }) => signalSuccess({ ...args, success: true, output_path }))
+    .then((output) => signalSuccess({ ...args, ...output, success: true }))
     .then(shutdownHost)
     .catch(signalFailure)
 
+
+type UploadResult = {
+    signed_id: string
+    direct_upload: {
+        url: string,
+        headers: Record<string, string>
+    }
+}
+
 async function uploadResults() {
-    console.log('uploading results', process.cwd())
-    execSync(`cd output; zip -r ../output.zip *`)
-    const archive = new URL(args.archive_path)
-    const s3 = new S3Client({ region: args.region })
-    const path = archive.pathname
-        .replace(/^\//, '')
-        .replace(/\/[^\/]*$/, '')
-    const Bucket = archive.host.split('.')[0]
-    const Key = `${path}/output.zip`
-    await s3.send(new PutObjectCommand({
-        Body: fs.createReadStream('output.zip'),
-        Bucket,
-        Key,
-    }))
+    const timer = Timer.start()
+    execSync(`zip -r output.zip output`)
+    const fileBuff = fs.readFileSync("output.zip")
+    const checksum = createHash('md5').update(fileBuff).digest("base64")
+    console.log({ checksum })
+    const result = await postToKinetic<UploadResult>('upload_results', {
+        blob: {
+            filename: 'output.zip', byte_size: fileBuff.byteLength,
+            content_type: 'application/zip', checksum,
+        }
+    })
+
+    const readStream = fs.createReadStream('output.zip')
+
+    const upload = await fetch(result.direct_upload.url, {
+        method: 'PUT',
+        headers: {
+            'content-type': 'application/zip',
+            'content-length': fileBuff.byteLength.toString(),
+            'content-md5': checksum,
+        },
+        body: readStream,
+    })
+
+    if (!upload.ok) {
+        const body = await upload.text()
+        throw new Error(`failed to upload results: ${upload.status} ${upload.statusText} ${body}`)
+    }
+
+    log('run', 'debug', `uploaded results ${timer.elapsed()}`)
+
     return {
-        output_path: `s3://${Bucket}/${Key}`
+        output_signed_id: result.signed_id,
     }
 }
 
 async function pullDockerImage() {
     const authconfig = await ecrAuthorization()
-    await followAndLogProgress(`pull ${dockerImage}`, (logger) => {
+    await followAndLogProgress('run', `pull ${dockerImage}`, (logger) => {
         docker.pull(dockerImage, { authconfig }, logger)
     })
 }
@@ -50,7 +77,7 @@ async function pullDockerImage() {
 async function runDockerImage() {
     const ws = new Stream.Writable({
         write(chunk, _, next) {
-            console.log(chunk.toString())
+            log('run', 'info', chunk.toString())
             next()
         }
     })

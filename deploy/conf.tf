@@ -4,18 +4,17 @@ locals {
 }
 
 resource "aws_s3_bucket" "kinetic_workspaces_conf_files" {
-  bucket = "kinetic-workspaces-config"
+  bucket = "kinetic${local.env_dash}-workspaces-config"
 
   tags = {
     Name = "KineticWorkspacesConfig"
   }
 }
 
-resource "aws_s3_bucket_acl" "kinetic_workspaces_conf_files" {
-  bucket = aws_s3_bucket.kinetic_workspaces_conf_files.id
-
-  acl = "private"
-}
+# resource "aws_s3_bucket_acl" "kinetic_workspaces_conf_files" {
+#   bucket = aws_s3_bucket.kinetic_workspaces_conf_files.id
+#   acl    = "private"
+# }
 
 resource "aws_s3_object" "kinetic_workspaces_conf_files" {
   for_each    = fileset(local.config_path, "*")

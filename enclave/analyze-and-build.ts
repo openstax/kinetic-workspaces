@@ -5,12 +5,12 @@ import { execSync } from 'child_process'
 import { Readable } from 'stream'
 import { URL } from 'node:url'
 import {
-    IMAGE_REPO, docker,
+    IMAGE_REPO, docker, log, Timer,
     getProcessPayload, setWorkingDirectory, followAndLogProgress, signalSuccess, signalFailure, shutdownHost, ecrAuthorization
 } from './shared'
-import type { AnalyzePayload } from './types'
+import type { EventInput } from './types'
 
-const args = getProcessPayload<AnalyzePayload>()
+const args = getProcessPayload<EventInput>()
 
 const DEST_IMAGE_TAG = IMAGE_REPO + ':' + args.key
 const ARCHIVE_NAME = 'archive.tar.zst'
@@ -24,6 +24,8 @@ setWorkingDirectory()
     .catch(signalFailure)
 
 async function downloadArchive() {
+    const timer = Timer.start()
+
     const path = new URL(args.archive_path)
 
     const s3 = new S3Client({ region: 'us-east-1' })
@@ -40,14 +42,16 @@ async function downloadArchive() {
         throw new Error('no body, or not readable')
     }
     execSync(`tar xf ${ARCHIVE_NAME}`)
+
+    execSync('rm -r archive/.cache')
+
+    log('check', 'debug', `archive download from ${args.archive_path} ${timer.elapsed()}`)
 }
 
 
 async function buildDockerImage() {
-
     const authconfig = await ecrAuthorization()
-
-    await followAndLogProgress(`pull from: ${args.base_image}`, (logger) => {
+    await followAndLogProgress('check', `pull from: ${args.base_image}`, (logger) => {
         docker.pull(args.base_image, { authconfig }, logger)
     })
 
@@ -56,31 +60,17 @@ async function buildDockerImage() {
         RUN apt-get install zstd
         WORKDIR /home
         COPY archive editor
-        RUN rm -r editor/.cache
         WORKDIR /home/editor/kinetic
         ENV ANALYSIS_API_KEY=${args.analysis_api_key}
         ENV ENCLAVE_API_KEY=${args.enclave_api_key}
         RUN R -e 'renv::restore()'
     `.replace(/\n\s+/g, '\n'))
 
-    await followAndLogProgress(`building image`, (logger) => {
+    await followAndLogProgress(`check`, 'build image', (logger) => {
         docker.buildImage({
             context: process.cwd(), src: ['Dockerfile', 'archive'],
         }, { t: DEST_IMAGE_TAG, authconfig }, logger)
     })
-
-    // const stream = await docker.buildImage({
-    //     context: process.cwd(), src: ['Dockerfile', ARCHIVE_NAME],
-    // }, { t: DEST_IMAGE_TAG, authconfig })
-    // if (stream) {
-    //     await new Promise((resolve, reject) => {
-    //         docker.modem.followProgress(stream, (err, res) => {
-    //             console.log(res)
-    //             err ? reject(err) : resolve(res)
-    //         });
-    //     });
-    // }
-
 }
 
 
@@ -88,7 +78,7 @@ async function uploadImage() {
     const authconfig = await ecrAuthorization()
 
     const img = docker.getImage(DEST_IMAGE_TAG)
-    await followAndLogProgress(`pushing to tag ${args.key}`, (logger) => {
+    await followAndLogProgress('check', `pushing to tag ${args.key}`, (logger) => {
         img.push({ tag: args.key, authconfig }, logger)
     })
 }

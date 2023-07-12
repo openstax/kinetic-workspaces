@@ -1,12 +1,38 @@
 import { exec } from 'node:child_process'
 import { mkdtemp } from 'fs/promises'
-
+import type { EnclaveStage, EventInput, LogLevel } from './types'
 import { SFNClient, SendTaskFailureCommand, SendTaskSuccessCommand } from "@aws-sdk/client-sfn"
 import { ECRClient, GetAuthorizationTokenCommand } from "@aws-sdk/client-ecr"
 import type { AuthConfig } from 'dockerode'
 import Docker from 'dockerode'
+import fetch from 'node-fetch'
 
-export const args  = JSON.parse(Buffer.from(process.argv[2], 'base64').toString())
+export const args: EventInput  = JSON.parse(Buffer.from(process.argv[2], 'base64').toString())
+
+export async function postToKinetic<T = unknown>(action: string, json: any) {
+    const results = await fetch(args.kinetic_url + `api/v1/enclave/runs/${action}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${args.enclave_api_key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+            api_key: args.key,
+            ...json,
+        })
+    })
+    if (!results.ok) {
+        throw new Error(`Error posting to kinetic: ${results.status} ${results.statusText}`)
+    }
+    return await results.json() as T
+}
+
+export async function log(stage: EnclaveStage, level: LogLevel, message: string) {
+    console.log('Logging', { stage, level, message })
+    try {
+        await postToKinetic('log', {stage, level, message })
+    }
+    catch (err) {
+        console.warn(`Error logging to kinetic: ${err}`)
+    }
+}
 
 console.log(
     JSON.stringify(args, null, 2)
@@ -44,16 +70,17 @@ export class Timer {
         return new Timer()
     }
 
-    end() {
+    elapsed() {
         const endTime = new Date();
         const elapsedTime = endTime.getTime() - this.startTime.getTime()
-        return elapsedTime / 1000;
+        const secs = elapsedTime / 1000;
+        return `(${Math.round(secs*100)/100}s)`
     }
 }
 
 type CB = (logger: (err: any, stream: any) => void) => void
 
-export const followAndLogProgress = (activity: string, cb: CB, verbose = false) => {
+export const followAndLogProgress = (stage: EnclaveStage, activity: string, cb: CB, verbose = false) => {
 
     return new Promise((resolve, reject) => {
         cb((err: any, stream: any) => {
@@ -61,7 +88,7 @@ export const followAndLogProgress = (activity: string, cb: CB, verbose = false) 
             const timer = Timer.start()
             console.log(`starting ${activity}`)
             const fail = (err: any) => {
-                console.log(`${activity} failed after ${timer.end()} seconds`)
+                log(stage, 'error', `${activity}: ${err}`)
                 reject(err)
             }
             if (err) {
@@ -72,16 +99,15 @@ export const followAndLogProgress = (activity: string, cb: CB, verbose = false) 
                         // console.log({ err, status })
                         const errorStatus = status.find(s => s?.error)
                         if (errorStatus) {
-                            console.log(errorStatus)
                             fail(errorStatus.error)
                         } else if (err) {
                             fail(err)
                         } else {
-                            console.log(`finished ${activity} (${timer.end()} seconds)`)
+                            log(stage, 'debug', `finished ${activity} ${timer.elapsed()}`)
                             resolve(status)
                         }
                     },
-                    (status) => { if (verbose) { console.log(`status: ${status}`) } }
+                    (status) => { if (verbose) { log(stage, 'debug', `${activity}: ${status}`) } }
                 )
             }
 
@@ -105,7 +131,7 @@ export async function signalSuccess(output: any) {
 }
 
 export async function signalFailure(error: any) {
-    console.warn(`task failed: ${error}`)
+    log('end', 'error', `task failed: ${error}`)
     await SFN.send(new SendTaskFailureCommand({
         taskToken: args.task_token,
         error: String(error).slice(0, 255),

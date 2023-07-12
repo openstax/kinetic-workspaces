@@ -1,16 +1,24 @@
 #!/usr/bin/env sh
 
-set -ex
+set -e
 
-LAMBDA=KineticWorkspacesFrontDesk
-LAMBDA_BUCKET=kinetic-workspaces-lambdas
-ASSETS_BUCKET=kinetic-workspaces-assets
+env=${1:-staging}
+
+# echo yes if env equals prod
+if [ "$env" = "prod" ]; then
+  env=""
+else
+  env="-${env}"
+fi
+
+LAMBDA=kinetic$env-workspaces-front-desk
+ASSETS_BUCKET=kinetic$env-workspaces-assets
+
+echo $ASSSETS_BUCKET
 
 export AWS_PAGER="" # silence cli using "less" to display output
 
 ./bin/build
-
-# aws s3 cp lambda/bundled.zip s3://kinetic-workspaces-lambdas/front-desk.zip
 
 aws lambda update-function-code --function-name $LAMBDA --zip-file fileb://./lambda/bundled.zip
 

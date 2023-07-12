@@ -27,7 +27,7 @@ export const getEc2Instance = async (instanceId: string) => {
         })
     )
     const host = response.Reservations?.[0]?.Instances?.[0]
-    if (!host) throw new Error('Failed to find ec2 instance')
+
     return host
 }
 
@@ -161,19 +161,18 @@ export const getProfileUrl = async () => {
 }
 
 
-export const startWorkspaceArchive = async ({ key, analysis_id, analysis_api_key }: StartArchiveArgs) => {
+export const startWorkspaceArchive = async ({ key, ...args }: StartArchiveArgs) => {
     const config = await getConfig()
     const client = new SFNClient({ region: config.awsRegion })
 
     const response = await client.send(new StartExecutionCommand({
         name: key,
-        stateMachineArn: config.archiveSFNArn,
+        stateMachineArn: config.enclaveSFNArn,
         input: JSON.stringify({
             key,
-            analysis_id,
-            analysis_api_key,
             enclave_api_key: config.enclaveApiKey,
             bucket: config.s3ArchiveBucket,
+            ...args,
         })
     }))
     console.log(response)

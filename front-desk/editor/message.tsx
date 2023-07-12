@@ -7,8 +7,6 @@ import { EditingForm, FormSubmitHandler, InputField } from '@nathanstitt/sundry/
 import { submitCodeRun } from '../server/rpc'
 import { Button, Box } from '@nathanstitt/sundry/ui'
 
-
-
 type CommitMessagPromptProps = {
     analysisId: number
     handler: null | {
@@ -34,8 +32,14 @@ const Form: React.FC<{ onSubmit: FormSubmitHandler<FormVals> }> = ({ onSubmit })
 
 const SubmittedMessage:React.FC<{ onOk: () => void }> = ({ onOk }) => (
     <Box direction="column">
-        <h3>Code was submitted successfully</h3>
-        <Button primary onClick={onOk}>OK</Button>
+        <p>
+            Thank you for submitting your script for review! Our team of engineers is now reviewing your code,
+            and an email will be sent to your registered account once the review process is complete.
+            To view and manage your script in your Kinetic dashboard, simply follow the link below or refresh your Kinetic page.
+        </p>
+        <Box justify="end">
+          <Button primary onClick={onOk}>Back to Kinetic</Button>
+        </Box>
     </ Box>
 )
 
@@ -44,7 +48,15 @@ export const CommitMessagPrompt:React.FC<CommitMessagPromptProps> = ({ handler, 
     const { isEnabled, setEnabled, setDisabled } = useToggle()
 
     if (handler) handler.submitRunHandler = setEnabled
-
+    const onModalHide = () => {
+        setDisabled()
+        setWasSubmitted(false)
+    }
+    const onOk = () => {
+        onModalHide()
+        window.opener.focus()
+        self.close()
+    }
     const onSubmit:FormSubmitHandler<FormVals> = async (vals, fc) => {
         if (!vals.message) { return }
 
@@ -59,11 +71,11 @@ export const CommitMessagPrompt:React.FC<CommitMessagPromptProps> = ({ handler, 
     return (
         <Modal
             show={isEnabled}
-            onHide={setDisabled}
-            title="Enter description of code to run"
+            onHide={onModalHide}
+            title={wasSubmitted ? 'Your Script was successfully submitted!' : 'Enter description of code to run'}
         >
             <Modal.Body>
-                {wasSubmitted ? <SubmittedMessage onOk={setDisabled} /> : <Form onSubmit={onSubmit} />}
+                {wasSubmitted ? <SubmittedMessage onOk={onOk} /> : <Form onSubmit={onSubmit} />}
             </Modal.Body>
         </Modal>
     )

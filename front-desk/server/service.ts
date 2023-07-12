@@ -88,12 +88,11 @@ export class EditorService {
     }
 
     async archive(message: string): Promise<void> {
-//        const analysis = await this.analysis()
-        console.log("ARCRUN", { message })
         const run = await notifyStartEnclaveRun(this.args.analysisId, message)
 
         startWorkspaceArchive({
             key: run.api_key,
+            kinetic_url: this.args.config.kineticURL,
             analysis_id: this.args.analysisId,
             analysis_api_key: run.analysis_api_key,
         })
@@ -121,9 +120,9 @@ export class EditorService {
         console.log(worker)
 
         const host = await getEc2Instance(worker.instanceId)
-        const hostState = host?.State?.Name || 'unknown'
+        const hostState = host?.State?.Name
 
-        if (hostState == 'terminated') {
+        if (!hostState || hostState == 'terminated') {
             await this.startEc2Instance()
             return { isActive: false, hostName: '' }
         }

@@ -40,7 +40,7 @@ export const DynamoDBSchema = {
             SubnetId: { type: String, required: true, readonly: true },
             ImageId: { type: String, required: true, readonly: true },
             KeyName: { type: String, required: true, readonly: true },
-            archiveSFNArn: { type: String, required: true, readonly: true },
+            enclaveSFNArn: { type: String, required: true, readonly: true },
             s3ConfigBucket: { type: String, required: true, readonly: true },
             s3ArchiveBucket: { type: String, required: true, readonly: true },
             efsFilesystemId: { type: String, required: true, readonly: true },

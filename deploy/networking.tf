@@ -2,7 +2,7 @@ resource "aws_vpc" "kinetic_workspaces" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
   tags = {
-    Name = "KineticWorkspaces"
+    Name = "kinetic-${var.environment_name}-workspaces"
   }
 }
 
@@ -12,38 +12,7 @@ resource "aws_subnet" "kinetic_workspaces" {
   map_public_ip_on_launch = var.mapPublicIP
   availability_zone       = var.availabilityZone
   tags = {
-    Name = "KineticWorkspaces"
-  }
-}
-
-# resource "aws_default_route_table" "kinetic_workspaces" {
-#   default_route_table_id = aws_vpc.kinetic_workspaces.default_route_table_id
-
-#   route = []
-
-#   tags = {
-#     Name = "example"
-#   }
-# }
-
-
-# resource "aws_main_route_table_association" "kinetic_workspaces" {
-#   vpc_id         = aws_vpc.kinetic_workspaces.id
-#   route_table_id = aws_route_table.kinetic_workspaces.id
-# }
-
-# resource "aws_eip" "kinetic_workspaces" {
-#   instance = aws_instance.kinetic_workspaces.id
-#   vpc = true
-#   tags = {
-#     Name        = "kineticWorkspaces"
-#   }
-# }
-
-resource "aws_internet_gateway" "kinetic_workspaces" {
-  vpc_id = aws_vpc.kinetic_workspaces.id
-  tags = {
-    Name = "kineticWorkspaces"
+    Name = "kinetic-${var.environment_name}-workspaces"
   }
 }
 
@@ -52,19 +21,47 @@ resource "aws_route_table" "kinetic_workspaces" {
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.kinetic_workspaces.id
+    # gateway_id = aws_nat_gateway.kinetic_workspaces.id
   }
   tags = {
-    Name = "kineticRouteTable"
+    Name = "kinetic-${var.environment_name}-workspaces"
+  }
+}
+
+resource "aws_internet_gateway" "kinetic_workspaces" {
+  vpc_id = aws_vpc.kinetic_workspaces.id
+  tags = {
+    Name = "kinetic-${var.environment_name}-workspaces"
   }
 }
 
 
+
+resource "aws_vpc_endpoint" "kinetic_workspaces_ssm" {
+  vpc_id            = aws_vpc.kinetic_workspaces.id
+  service_name      = "com.amazonaws.${var.aws_region}.ssm"
+  vpc_endpoint_type = "Interface"
+}
+resource "aws_vpc_endpoint" "kinetic_workspaces_ec2messages" {
+  vpc_id            = aws_vpc.kinetic_workspaces.id
+  service_name      = "com.amazonaws.${var.aws_region}.ec2messages"
+  vpc_endpoint_type = "Interface"
+}
+resource "aws_vpc_endpoint" "kinetic_workspaces_ssmmessages" {
+  vpc_id            = aws_vpc.kinetic_workspaces.id
+  service_name      = "com.amazonaws.${var.aws_region}.ssmmessages"
+  vpc_endpoint_type = "Interface"
+}
+resource "aws_vpc_endpoint" "kinetic_workspaces_logs" {
+  vpc_id            = aws_vpc.kinetic_workspaces.id
+  service_name      = "com.amazonaws.${var.aws_region}.logs"
+  vpc_endpoint_type = "Interface"
+}
 resource "aws_vpc_endpoint" "kinetic_workspaces_s3" {
   vpc_id            = aws_vpc.kinetic_workspaces.id
   service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
 }
-
 resource "aws_vpc_endpoint" "kinetic_workspaces_ec2" {
   vpc_id            = aws_vpc.kinetic_workspaces.id
   service_name      = "com.amazonaws.${var.aws_region}.ec2"
@@ -75,12 +72,14 @@ resource "aws_vpc_endpoint" "kinetic_workspaces_ec2" {
   private_dns_enabled = true
 }
 
+# resource "aws_eip" "kinetic_workspaces" {
+#   vpc = true
+# }
 
-output "workspaces_vpc_id" {
-  value = aws_vpc.kinetic_workspaces.id
-}
-
-output "workspaces_subnet_id" {
-  value = aws_subnet.kinetic_workspaces.id
-}
-
+# resource "aws_nat_gateway" "kinetic_workspaces" {
+#   allocation_id = aws_eip.kinetic_workspaces.id
+#   subnet_id     = aws_subnet.kinetic_workspaces.id
+#   tags = {
+#     "Name" = "KineticWorkspacesNatGW"
+#   }
+# }

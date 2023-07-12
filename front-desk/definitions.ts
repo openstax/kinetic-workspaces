@@ -65,5 +65,6 @@ export const POLLING_RATE = 1000 * 5 //  seconds
 export type StartArchiveArgs = {
     key: string
     analysis_id: number
+    kinetic_url: string
     analysis_api_key: string
 }

@@ -1,6 +1,6 @@
 
 data "aws_route53_zone" "kinetic" {
-  name = var.baseDomainName
+  name = var.base_domain_name
 }
 
 resource "aws_route53_zone" "kinetic_workspaces" {
@@ -60,16 +60,4 @@ resource "aws_route53_record" "kinetic_workspaces_wildcard" {
     zone_id                = aws_cloudfront_distribution.kinetic_workspaces.hosted_zone_id
     evaluate_target_health = true
   }
-}
-
-output "hosted_zone_id" {
-  value = aws_route53_zone.kinetic_workspaces.id
-}
-
-output "hosted_zone_name" {
-  value = aws_route53_zone.kinetic_workspaces.name
-}
-
-output "workspaces_domain_name" {
-  value = aws_route53_record.kinetic_workspaces.fqdn
 }

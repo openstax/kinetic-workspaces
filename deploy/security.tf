@@ -2,12 +2,22 @@ resource "random_id" "rstudio_cookie_key" {
   byte_length = 16
 }
 
+resource "tls_private_key" "kinetic_workspaces" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "aws_key_pair" "kinetic_workspaces" {
+  key_name   = "KineticWorkspaces"
+  public_key = tls_private_key.kinetic_workspaces.public_key_openssh
+}
+
 
 resource "aws_security_group" "kinetic_workspaces" {
   description = "Controls access to EC2 Image Builder with Kinetic_Workspaces"
 
+  name   = "kinetic${local.env_dash}-workspaces"
   vpc_id = aws_vpc.kinetic_workspaces.id
-  name   = "kinetic-workspaces"
 
   egress {
     from_port = 0
@@ -39,7 +49,7 @@ resource "aws_security_group" "kinetic_workspaces" {
 }
 
 resource "aws_iam_role" "kinetic_workspaces_image_builder" {
-  name_prefix = "ec2-kinetic_workspaces-role-"
+  name_prefix = "kinetic-ws-image-builder${local.env_dash}-role-"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -59,7 +69,8 @@ resource "aws_iam_role" "kinetic_workspaces_image_builder" {
 
 
 resource "aws_iam_role_policy" "kinetic_workspaces_image_builder" {
-  name_prefix = "kinetic_workspaces-image-builder-policy-"
+
+  name_prefix = "kinetic_ws-image-builder-policy-"
   role        = aws_iam_role.kinetic_workspaces_image_builder.name
 
   policy = jsonencode({
@@ -74,16 +85,6 @@ resource "aws_iam_role_policy" "kinetic_workspaces_image_builder" {
         ],
         Resource = "arn:aws:s3:::${aws_s3_bucket.kinetic_workspaces_conf_files.bucket}"
       },
-      # {
-      #   Effect = "Allow",
-      #   Action = [
-      #     "s3:GetObject",
-      #     "s3:PutObject",
-      #     "s3:ListMultipartUploadParts",
-      #     "s3:AbortMultipartUpload",
-      #   ],
-      #   Resource = "arn:aws:s3:::${aws_s3_bucket.kinetic_workspaces_conf_files.bucket}/*"
-      # },
       {
         Effect = "Allow",
         Action = [
@@ -143,20 +144,6 @@ resource "aws_iam_role_policy" "kinetic_workspaces_enclave" {
           "dynamodb:UpdateItem",
         ],
       },
-      # {
-      #   Effect = "Allow",
-      #   Action = [
-      #     "ecr:CompleteLayerUpload",
-      #     "ecr:GetDownloadUrlForLayer",
-      #     "ecr:GetAuthorizationToken",
-      #     "ecr:UploadLayerPart",
-
-      #     "ecr:BatchGetImage",
-      #     "ecr:BatchCheckLayerAvailability",
-      #     "ecr:PutImage"
-      #   ],
-      #   Resource = "${aws_ecr_repository.kinetic_workspaces.arn}/*"
-      # },
       {
         Effect = "Allow",
         Action = [
@@ -217,8 +204,6 @@ resource "aws_iam_instance_profile" "kinetic_workspaces_enclave" {
   role        = aws_iam_role.kinetic_workspaces_enclave.name
 }
 
-
-
 resource "aws_iam_instance_profile" "kinetic_workspaces_image_builder" {
   name_prefix = "kinetic-workspaces-image-builder-profile-"
   role        = aws_iam_role.kinetic_workspaces_image_builder.name
@@ -236,16 +221,3 @@ resource "aws_iam_role_policy_attachment" "role-policy-attachment" {
 }
 
 
-output "editor_ami_id" {
-  value = data.aws_ami.kinetic_workspaces_editor.id
-}
-
-
-output "workspaces_security_group_id" {
-  value = aws_security_group.kinetic_workspaces.id
-}
-
-output "workspaces_ssh_key_pem" {
-  value     = tls_private_key.kinetic_workspaces.private_key_openssh
-  sensitive = true
-}

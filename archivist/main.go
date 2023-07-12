@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -23,9 +21,8 @@ type Event struct {
 	AnalysisID     int64  `json:"analysis_id"`
 	EnclaveApiKey  string `json:"enclave_api_key"`
 	AnalysisApiKey string `json:"analysis_api_key"`
-	//	SrcDirectory   string `json:"src_directory"`
-	Bucket string `json:"bucket"`
-	//	Destination string `json:"destination"`
+	KineticURL     string `json:"kinetic_url"`
+	Bucket         string `json:"bucket"`
 }
 
 func (evt *Event) BucketPath() *string {
@@ -38,6 +35,13 @@ type Output struct {
 	AnalysisID     int64  `json:"analysis_id"`
 	EnclaveApiKey  string `json:"enclave_api_key"`
 	AnalysisApiKey string `json:"analysis_api_key"`
+	KineticURL     string `json:"kinetic_url"`
+}
+
+type LogMessage struct {
+	Stage   string `json:"stage"`
+	Level   string `json:"level"`
+	Message string `json:"message"`
 }
 
 func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
@@ -47,8 +51,6 @@ func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 	fmt.Printf("hello world, reading %s writing to %s\n", srcDirectory, *evt.BucketPath())
 
 	reader, writer := io.Pipe()
-
-	fmt.Println(listDirectoryContents(srcDirectory))
 
 	opts := archiver.FromDiskOptions{FollowSymlinks: false, ClearAttributes: true}
 	files, err := archiver.FilesFromDisk(&opts, map[string]string{
@@ -73,8 +75,6 @@ func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 		Compression: archiver.Zstd{},
 		Archival:    archiver.Tar{},
 	}
-
-	fmt.Println("Creating archive...")
 
 	// Create a channel to communicate errors from the goroutine
 	errChan := make(chan error, 1)
@@ -113,25 +113,10 @@ func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 		AnalysisID:     evt.AnalysisID,
 		EnclaveApiKey:  evt.EnclaveApiKey,
 		AnalysisApiKey: evt.AnalysisApiKey,
+		KineticURL:     evt.KineticURL,
 	}
 
 	return &output, nil
-}
-
-func listDirectoryContents(directoryPath string) string {
-	files, err := ioutil.ReadDir(directoryPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var output strings.Builder
-	output.WriteString(fmt.Sprintf("Listing contents of directory: %s\n", directoryPath))
-	for _, file := range files {
-		output.WriteString(file.Name())
-		output.WriteString("\n")
-	}
-
-	return output.String()
 }
 
 func main() {

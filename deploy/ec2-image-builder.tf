@@ -1,14 +1,3 @@
-resource "tls_private_key" "kinetic_workspaces" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "kinetic_workspaces" {
-  key_name   = "KineticWorkspaces"
-  public_key = tls_private_key.kinetic_workspaces.public_key_openssh
-}
-
-
 data "aws_ami" "kinetic_workspaces_editor" {
   most_recent = true
   owners      = ["self"]
@@ -24,8 +13,9 @@ data "aws_ami" "kinetic_workspaces_parent_image" {
   owners      = ["099720109477"] // ubuntu
   filter {
     name   = "name"
-    values = ["*ubuntu-jammy-*"]
+    values = ["*ubuntu-jammy-*20230516"] # ubuntu images update A LOT.  Date included to prevent picking up a newer image until we're ready
   }
+
   filter {
     name   = "virtualization-type"
     values = ["hvm"]
@@ -46,27 +36,26 @@ resource "aws_imagebuilder_image_pipeline" "kinetic_workspaces_editor" {
 
 
 resource "aws_imagebuilder_image_recipe" "kinetic_workspaces_editor" {
+  name = "kinetic${local.env_dash}-workspaces-editor"
 
   component {
     component_arn = aws_imagebuilder_component.kinetic_workspaces_base_config.arn
   }
 
   component {
-    component_arn = aws_imagebuilder_component.kinetic_workspaces_install_r_and_pkgs.arn
+    component_arn = aws_imagebuilder_component.kinetic_workspaces_install_r.arn
   }
 
   component {
     component_arn = aws_imagebuilder_component.kinetic_workspaces_editor.arn
   }
 
-
-  name         = "kinetic_workspaces_editor"
   parent_image = data.aws_ami.kinetic_workspaces_parent_image.id
   version      = "1.0.0"
 }
 
 resource "aws_imagebuilder_distribution_configuration" "kinetic_workspaces" {
-  name = "kinetic_workspaces_distribution_configuration"
+  name = "kinetic${local.env_dash}-workspaces-distribution-configuration"
 
   distribution {
     ami_distribution_configuration {

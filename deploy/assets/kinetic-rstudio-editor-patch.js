@@ -29,19 +29,42 @@ class RStudioButtons {
 
   removeButtons() {
     const quitBtn = document.querySelector('#rstudio_tb_quitsession')
-    this.buttonsContainer = quitBtn.parentElement
+    document.querySelector('#rstudio_project_menubutton_toolbar').remove()
+    this.buttonsContainer = document.createElement('div')
+    quitBtn.parentElement.appendChild(this.buttonsContainer)
+    Object.assign(this.buttonsContainer.style, {
+      position: 'absolute',
+      top: '8px',
+      right: '8px',
+      height: '50px',
+      display: 'flex',
+      zIndex: 2,
+    })
+
+    //this.buttonsContainer = quitBtn.parentElement
     quitBtn.closest('table').querySelectorAll('button,.gwt-Label').forEach((el) => {
       el.remove()
     })
+
   }
 
 
   handle_addButton({ id, title, svg, style = {} }) {
     const btn = document.createElement('button')
-    Object.assign(btn.style, { display: 'flex', ...style })
+    Object.assign(btn.style, {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      height: '100%',
+      justifyContent: 'center',
+      backgroundColor: '#F8D5CD',
+      gap: '4px',
+      color: '#000',
+      ...style,
+    })
     btn.title = title
     btn.addEventListener('click', () => this.sendCommand('buttonClick', { id }))
-    btn.innerHTML = svg
+    btn.innerHTML = `${svg}<span>${title}</span>`
     this.buttonsContainer.appendChild(btn)
   }
 }

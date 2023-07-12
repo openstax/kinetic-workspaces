@@ -65,7 +65,7 @@ export async function updateEditorState(analysis: Analysis, isActive: boolean): 
 
     const host = await getEc2Instance(worker.instanceId)
 
-    if (host.State?.Name == 'terminated') {
+    if (!host || host.State?.Name == 'terminated') {
         Worker.update({ id, status: 'pending', lastActivity: new Date() })
         return startInstance(id)
     }
