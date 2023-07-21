@@ -67,8 +67,8 @@ resource "aws_imagebuilder_distribution_configuration" "kinetic_workspaces" {
 }
 
 
-# To force regeneration run:
-# terraform apply -replace=aws_imagebuilder_image.kinetic_workspaces
+# To invalidate and force regeneration run:
+# terraform apply -replace=aws_imagebuilder_image.kinetic_workspaces_editor
 resource "aws_imagebuilder_image" "kinetic_workspaces_editor" {
   image_recipe_arn                 = aws_imagebuilder_image_recipe.kinetic_workspaces_editor.arn
   infrastructure_configuration_arn = aws_imagebuilder_infrastructure_configuration.kinetic_workspaces.arn

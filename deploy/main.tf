@@ -5,8 +5,23 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 4.0"
     }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
   }
   backend "s3" {
+  }
+}
+
+data "aws_ecr_authorization_token" "token" {}
+
+provider "docker" {
+  host = "unix:///var/run/docker.sock"
+  registry_auth {
+    address  = split("/", aws_ecr_repository.kinetic_workspaces.repository_url)[0]
+    username = data.aws_ecr_authorization_token.token.user_name
+    password = data.aws_ecr_authorization_token.token.password
   }
 }
 

@@ -34,7 +34,7 @@ resource "aws_s3_object" "kinetic_ws_fd_index" {
 }
 
 resource "aws_apigatewayv2_api" "kinetic_ws_front_desk" {
-  name          = "kinetic-ws-${local.env_dash}-front-desk"
+  name          = "kinetic-ws${local.env_dash}-front-desk"
   protocol_type = "HTTP"
 }
 

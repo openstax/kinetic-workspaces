@@ -32,9 +32,8 @@ EOF
 
 }
 
-
-resource "aws_imagebuilder_distribution_configuration" "kinetic_enclave_ecr" {
-  name = "kinetic${local.env_dash}-enclave-ecr"
+resource "aws_imagebuilder_distribution_configuration" "kinetic_ws_enclave" {
+  name = "kinetic${local.env_dash}-enclave"
 
   distribution {
     region = var.aws_region
@@ -48,19 +47,17 @@ resource "aws_imagebuilder_distribution_configuration" "kinetic_enclave_ecr" {
   }
 }
 
-
-resource "aws_imagebuilder_image_pipeline" "kinetic_workspaces_enclave_ecr" {
-  name = "kinetic${local.env_dash}-workspaces-enclave"
-
+resource "aws_imagebuilder_image_pipeline" "kinetic_workspaces_enclave" {
+  name                             = "kinetic${local.env_dash}-workspaces-enclave"
   description                      = "Image pipeline for building a base image for workspaces enclave"
   container_recipe_arn             = aws_imagebuilder_container_recipe.kinetic_workspaces_enclave.arn
   infrastructure_configuration_arn = aws_imagebuilder_infrastructure_configuration.kinetic_workspaces.arn
 }
 
-resource "aws_imagebuilder_image" "kinetic_workspaces_ecr" {
+resource "aws_imagebuilder_image" "kinetic_workspaces_enclave" {
   container_recipe_arn             = aws_imagebuilder_container_recipe.kinetic_workspaces_enclave.arn
   infrastructure_configuration_arn = aws_imagebuilder_infrastructure_configuration.kinetic_workspaces.arn
-  distribution_configuration_arn   = aws_imagebuilder_distribution_configuration.kinetic_enclave_ecr.arn
+  distribution_configuration_arn   = aws_imagebuilder_distribution_configuration.kinetic_ws_enclave.arn
 }
 
 resource "aws_iam_instance_profile" "kinetic_workspaces_enclave_image_builder" {

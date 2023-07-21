@@ -134,3 +134,44 @@ resource "aws_imagebuilder_component" "kinetic_workspaces_editor" {
     }]
   })
 }
+
+resource "aws_imagebuilder_component" "kinetic_survey_sweeper" {
+  name     = "kinetic${local.env_dash}-survey-sweeper"
+  platform = "Linux"
+  version  = "1.0.0"
+
+  # depends_on = [
+  #   aws_s3_object.kinetic_workspaces_conf_files["fetch-and-process-qualtrics.r"],
+  # ]
+
+  data = yamlencode({
+    schemaVersion = 1.0
+    phases = [{
+      name = "build"
+      steps = [{
+        action    = "ExecuteBash"
+        name      = "install-survey-sweeper-code"
+        onFailure = "Abort"
+        inputs = {
+          commands = [
+            "export DEBIAN_FRONTEND=noninteractive TZ=America/Chicago",
+            <<-EOT
+            apt-get update && apt-get install -y curl && \
+            curl -fsSL https://deb.nodesource.com/setup_current.x | bash - && \
+            apt-get install -y git libgit2-dev build-essential cmake dh-autoreconf \
+              python3 python3-pip python3-setuptools python3-wheel \
+              r-base-core r-cran-littler r-cran-docopt \
+              nodejs && \
+            rm -rf /var/lib/apt/lists/* && \
+            pip3 install --upgrade pip && \
+            pip3 install synthcity && \
+            ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r && \
+            install2.r --error devtools qualtRics && \
+            npm install -g aws-lambda-ric
+            EOT
+          ]
+        }
+      }]
+    }]
+  })
+}
