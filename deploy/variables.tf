@@ -45,7 +45,9 @@ variable "base_domain_name" {
 variable "sub_domain_name" {
   default = "workspaces"
 }
+variable "qualtrics_api_key" {
 
+}
 variable "enclave_api_key" {
   description = "The key to access the rails server"
   sensitive   = true

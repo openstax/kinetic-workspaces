@@ -2,12 +2,21 @@
 
 yarn install
 
-for ts in run-ec2-task.ts analyze-and-build.ts enclave-run.ts notify.ts
-do
-  yarn run esbuild --platform=node --bundle $ts --outdir=dist  --loader:.sh=text \
+rm -f dist/*
+
+declare -a FILES=(run-ec2-task analyze-and-build enclave-run notify survey-sweeper)
+
+for ts in ${FILES[@]}; do
+  yarn run esbuild --platform=node --bundle $ts.ts --outdir=dist  --loader:.sh=text \
     --external:'@aws-sdk/*' \
     --external:'dockerode' \
     --external:'ssh2' \
     --external:'crypto' \
     --external:'ssh2/cpu-features'
+done
+
+cd dist
+
+for ts in ${FILES[@]}; do
+  zip $ts.zip $ts.js
 done

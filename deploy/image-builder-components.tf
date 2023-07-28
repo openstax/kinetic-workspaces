@@ -140,25 +140,23 @@ resource "aws_imagebuilder_component" "kinetic_survey_sweeper" {
   platform = "Linux"
   version  = "1.0.0"
 
-  # depends_on = [
-  #   aws_s3_object.kinetic_workspaces_conf_files["fetch-and-process-qualtrics.r"],
-  # ]
-
   data = yamlencode({
     schemaVersion = 1.0
     phases = [{
       name = "build"
-      steps = [{
+      steps = [
+        {
         action    = "ExecuteBash"
-        name      = "install-survey-sweeper-code"
+        name      = "install-survey-sweeper-dependencies"
         onFailure = "Abort"
         inputs = {
           commands = [
             "export DEBIAN_FRONTEND=noninteractive TZ=America/Chicago",
             <<-EOT
+            mkdir -m 777 -p /app/.npm && chmod 777 /app/.npm && cd /app && \
             apt-get update && apt-get install -y curl && \
             curl -fsSL https://deb.nodesource.com/setup_current.x | bash - && \
-            apt-get install -y git libgit2-dev build-essential cmake dh-autoreconf \
+            apt-get install -y git zip libgit2-dev build-essential cmake dh-autoreconf \
               python3 python3-pip python3-setuptools python3-wheel \
               r-base-core r-cran-littler r-cran-docopt \
               nodejs && \
@@ -167,11 +165,38 @@ resource "aws_imagebuilder_component" "kinetic_survey_sweeper" {
             pip3 install synthcity && \
             ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r && \
             install2.r --error devtools qualtRics && \
-            npm install -g aws-lambda-ric
+            npm install aws-lambda-ric @aws-sdk/client-s3 node-fetch
             EOT
           ]
         }
-      }]
+#            npm install aws-lambda-ric
+       }, {
+        action    = "S3Download"
+        name      = "install-survey-sweeper-code"
+        onFailure = "Abort"
+        inputs = [
+          {
+            source = "s3://${aws_s3_object.kinetic_lambdas["survey-sweeper.zip"].bucket}${aws_s3_object.kinetic_lambdas["survey-sweeper.js"].key}"
+            destination = "/app/index.js"
+          },
+          {
+            source = "s3://${aws_s3_object.kinetic_workspaces_conf_files["lambda-bootstrap"].bucket}${aws_s3_object.kinetic_workspaces_conf_files["lambda-bootstrap"].key}"
+            destination = "/bootstrap"
+          },
+        ]
+      }, {
+        action    = "ExecuteBash"
+        name      = "finalize"
+        onFailure = "Abort"
+        inputs = {
+          commands = [
+            "chmod a+x /bootstrap"
+          ]
+        }
+      }
+      ]
     }]
   })
 }
+
+

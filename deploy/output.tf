@@ -45,6 +45,7 @@ output "workspaces_domain_name" {
   value = aws_route53_record.kinetic_workspaces.fqdn
 }
 
-# output "survey_sweeper_image_uri" {
-#   value = tolist(tolist(aws_imagebuilder_image.kinetic_survey_sweeper.output_resources[0].containers)[0].image_uris)[0]
-# }
+output "survey_sweeper_s3_uri" {
+  value = "s3://${aws_s3_object.kinetic_lambdas["survey-sweeper.zip"].bucket}${aws_s3_object.kinetic_lambdas["survey-sweeper.zip"].key}"
+  #  value = tolist(tolist(aws_imagebuilder_image.kinetic_survey_sweeper.output_resources[0].containers)[0].image_uris)[0]
+}

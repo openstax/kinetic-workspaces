@@ -1,4 +1,5 @@
 locals {
+  enclave_path   = "${path.module}/../enclave/dist"
   config_path    = "${path.module}/configs"
   provision_path = "${path.module}/provision"
 }

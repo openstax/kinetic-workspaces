@@ -120,6 +120,7 @@ resource "null_resource" "kinetic_ws_enclave_ts" {
     build_ts    = base64sha256(file("${path.module}/../enclave/analyze-and-build.ts"))
     ec_run_ts   = base64sha256(file("${path.module}/../enclave/enclave-run.ts"))
     shared_ts   = base64sha256(file("${path.module}/../enclave/shared.ts"))
+    sweeper_ts  = base64sha256(file("${path.module}/../enclave/survey-sweeper.ts"))
   }
 
   provisioner "local-exec" {
@@ -127,6 +128,15 @@ resource "null_resource" "kinetic_ws_enclave_ts" {
     command     = "./build-ts"
   }
 }
+
+resource "aws_s3_object" "kinetic_lambdas" {
+  for_each    = fileset(local.enclave_path, "*")
+  bucket      = aws_s3_bucket.kinetic_workspaces_conf_files.id
+  key         = "/lambda/${each.value}"
+  source      = "${local.enclave_path}/${each.value}"
+  source_hash = filemd5("${local.enclave_path}/${each.value}")
+}
+
 
 data "archive_file" "kinetic_ws_run_ec2_task_zip" {
   type        = "zip"
@@ -151,6 +161,7 @@ resource "aws_s3_object" "kinetic_enclave_run_script" {
   source_hash = filemd5("${path.module}/../enclave/enclave-run.ts")
   depends_on  = [null_resource.kinetic_ws_enclave_ts]
 }
+
 
 resource "aws_s3_object" "kinetic_enclave_analyze_and_build_script" {
   bucket = aws_s3_bucket.kinetic_workspaces_conf_files.id

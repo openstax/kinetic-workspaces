@@ -57,7 +57,6 @@ export const handler: Handler<Event> = async ({ input, token, script }) => {
         return JSON.stringify({ instance_id: response.Instances?.[0].InstanceId })
     } catch (err) {
         console.log(err)
-
     }
 
 };

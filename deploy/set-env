@@ -21,6 +21,7 @@ ENV=$1
 case $ENV in
   dev)
     app=kinetic-web-dev
+
     cookie_name=oxa_staging
     domain=dev.kinetic.openstax.org
     ;;
@@ -43,9 +44,9 @@ esac
 
 heroku_enclave_api_key=$(heroku config:get ENCLAVE_API_KEY --app $app)
 
-
 # terraform init -backend-config=${ENV}.conf
 
+export TF_VAR_qualtrics_api_key=$(heroku config:get QUALTRICS_API_KEY --app $app)
 export TF_VAR_base_domain_name=$domain
 export TF_VAR_enclave_api_key=${heroku_enclave_api_key:-"ec_dev_1bG346BDBGEsG5Dck8H6sAiRBJ7Vt52Vwcno"}
 export TF_VAR_environment_name=$ENV
