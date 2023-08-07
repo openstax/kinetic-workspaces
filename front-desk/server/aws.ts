@@ -20,15 +20,20 @@ let r53Client: Route53Client | null = null
 export const getR53Client = () => (r53Client || (r53Client = new Route53Client({})))
 
 export const getEc2Instance = async (instanceId: string) => {
-    const client = getEC2Client()
-    const response = await client.send(
-        new DescribeInstancesCommand({
-            InstanceIds: [instanceId],
-        })
-    )
-    const host = response.Reservations?.[0]?.Instances?.[0]
-
-    return host
+    try {
+        const client = getEC2Client()
+        const response = await client.send(
+            new DescribeInstancesCommand({
+                InstanceIds: [instanceId],
+            })
+        )
+        return response.Reservations?.[0]?.Instances?.[0]
+    } catch (err: any) {
+        if (err?.Code == 'InvalidInstanceID.NotFound') {
+            return null
+        }
+        throw err
+    }
 }
 
 export const terminateEc2Instance = async (instanceId: string) => {
