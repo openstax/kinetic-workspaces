@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -e
+
+ID=$1
+
+REGION=us-east-1
+
+EC2=`aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=editor-${ID}" "Name=instance-state-name,Values=running" \
+  --query 'Reservations[*].Instances[*]'`
+
+IP=`echo $EC2 | jq -r '.[][] | select(.PublicIpAddress != null) | .PublicIpAddress'`
+EC2ID=`echo $EC2 | jq -r '.[][] | select(.InstanceId != null) | .InstanceId'`
+
+echo EC2 Instance: $EC2ID
+echo IP: $IP
+
+if [[ -n $EC2ID ]]; then
+    aws ec2 terminate-instances --instance-ids $EC2ID
+fi
+
+DYNAMO=$(aws dynamodb query \
+    --table-name kinetic-staging-front-desk \
+    --key-condition-expression "pk=:pkval" \
+    --expression-attribute-values "{\":pkval\":{\"S\":\"wk:$ID\"}}" \
+    --region "$REGION")
+
+HOSTNAME=`echo $DYNAMO | jq -r '.Items[] | .hostName.S'`
+
+if [[ -n $HOSTNAME ]]; then
+    ZONE="${HOSTNAME#*.}"
+    ZONE_ID=$(aws route53 list-hosted-zones | jq -r ".HostedZones[] | select(.Name==\"${ZONE}.\") | .Id")
+    BATCH="{\"Changes\":[{\"Action\":\"DELETE\",\"ResourceRecordSet\":{\"Name\":\"$HOSTNAME\",\"Type\":\"A\",\"TTL\":600,\"ResourceRecords\":[{\"Value\":\"$IP\"}]}}]}"
+    aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID --change-batch $BATCH
+
+    aws dynamodb delete-item \
+        --table-name kinetic-staging-front-desk \
+        --key "{\"pk\": {\"S\": \"wk:$ID\"}, \"sk\": {\"S\": \"status\"}}"
+fi
