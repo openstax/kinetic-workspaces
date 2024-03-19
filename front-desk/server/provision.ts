@@ -32,14 +32,16 @@ async function provisionProfile(worker: WorkerModel, analysis: Analysis) {
     const keyLine=`ANALYSIS_API_KEY=${analysis.api_key}`
     const environFile = '/home/editor/.Renviron'
 
-    const cmd = `
+    let cmd = `
         echo 127.0.7.1 ${hostName} ${worker.hostName} | sudo tee -a /etc/hosts && \\
         echo ${hostName} | sudo tee -a /etc/hostname && sudo hostname ${hostName} && \\
         sudo addgroup --gid ${PosixUserId} ${userName} && \\
         sudo adduser --disabled-password --home /home/editor --uid ${PosixUserId} --gid ${PosixUserId} --shell /bin/false --gecos 'Kinetic Workspace User' ${userName} && \\
         sudo ${MOUNT}${worker.accessPointId} ${config.efsAddress}:/ /home/editor && \\
+        sudo chown ${userName}.${userName} -R /home/editor && \\
         sudo -u ${userName} bash -c 'grep -q "^ANALYSIS_API_KEY" ${environFile} && sed -i "/^ANALYSIS_API_KEY/c\\${keyLine}" ${environFile} || echo "${keyLine}" >> ${environFile}'
     `
+
     let resp = await ssh.execCommand(cmd)
     if (resp.code != 0) {
         console.warn(`exit status: ${resp.code}`, cmd, resp.stdout, resp.stderr)
@@ -50,13 +52,16 @@ async function provisionProfile(worker: WorkerModel, analysis: Analysis) {
     if (resp.code == 0) {
         const profileUrl = await getProfileUrl()
         console.log({ profileUrl })
-        const resp = await ssh.execCommand(`
-            wget -qO- "${profileUrl}" | sudo -u ${userName} tar xz -C /home/editor && \\
-            sudo -u ${userName} perl -MTime::Piece -pi -e 's/(cutoff_date\s*=\s*")\d{4}-\d{2}-\d{2}(")/$1 . Time::Piece->new->ymd . $2/ge' /home/editor/kinetic/main.r && \\
-            rm -f /home/editor/kinetic/data/* && \\
-            sudo -u ${userName} -D /home/editor/kinetic R -f /home/editor/kinetic/main.r'
-        `)
+        cmd = `
+            wget -qO- "${profileUrl}" | sudo -u ${userName} tar xz --skip-old-files --directory /home/editor && \\
+            sudo -u ${userName} perl -MTime::Piece -pi -e 's/(cutoff_date\\s*=\\s*")\\d{4}-\\d{2}-\\d{2}(")/$1 . Time::Piece->new->ymd . $2/ge' /home/editor/kinetic/main.r && \\
+            rm -fr /home/editor/kinetic/data/* && \\
+            sudo -u ${userName} bash -c "cd /home/editor/kinetic && R -f /home/editor/kinetic/main.r"
+        `
+        console.log("PROVISION", cmd)
+        resp = await ssh.execCommand(cmd)
         if (resp.code != 0) {
+            console.warn(cmd, resp.stderr)
             throw new Error(resp.stderr)
         }
     }
