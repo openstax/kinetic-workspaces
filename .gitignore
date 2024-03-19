@@ -15,3 +15,5 @@ front-desk/*.txt
 *dist*
 *node_modules*
 enclave/source/
+synthetic-data/*.csv
+synthetic-data/qualtrics_cred.txt

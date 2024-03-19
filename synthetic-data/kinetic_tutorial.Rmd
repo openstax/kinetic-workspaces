@@ -1,0 +1,141 @@
+---
+title: "OpenStax Kinetic Secure Enclaves"
+output:
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+description: >
+  Learn about OpenStax Kinetic Secure Enclave Workflow. 
+---
+
+```{r setup, include=FALSE}
+install.packages("shiny")
+library(shiny)
+library(learnr)
+library(tidyverse)
+library(ricomisc)
+```
+
+
+![](images/kinetic_logo_w_bg.png){width=180px}
+
+
+Welcome to the Kinetic Enclave Workspace. This is a lot like your local RStudio except that this connects to the Kinetic system. Here you have access to datasets that you checked on the analysis page on OpenStax Kinetic.
+
+## Brief Overview of the Kinetic Secure Enclaves
+
+Digital Learning Platforms (DLPs), operated at schools and edtech companies, are a source of data for learning research. A traditional way for researchers to access this data is to get the learning platforms to agree to give them that data for analysis. 
+
+**Secure enclaves** flip this approach. Instead of learning platforms providing data to researchers for analysis, researchers provide their analysis software to the learning platforms for those platforms to run on the data as it sits securely in their data center.  Aggregated knowledge is returned from that software to the researcher. 
+
+The *advantages* of secure enclaves include strongly protecting student data privacy, making more identified data available for research, enabling real-time in-platform interventions, encouraging participation of more learning platforms in research, and facilitating reproducibility. 
+
+The *disadvantages* of secure enclaves include preventing researchers from directly accessing real data and requiring researchers to code their analysis with simulated data and support documentation instead.
+
+In the next sections, we will discuss in greater depth about the Kinetic secure enclaves and how to analyze data using these enclaves. 
+
+
+## Why does Kinetic use secure enclaves?
+
+One fundamental tension drove the conception and design of the Kinetic secure enclaves: Researchers need access to large amounts of fully identified data to study learning processes driven by individual differences within diverse student populations. To protect their users' privacy, their business, and to comply with regulations, edtech platforms, like OpenStax, are reluctant to give this data to researchers to protect student privacy.
+
+To resolve this tension, Kinetic flips the normal data sharing paradigm. Instead of taking data from OpenStax products and giving it to researchers to run through their analysis software to produce a publishable result, we instead ask researchers to give their analysis software to Kinetic so that we can run all available data and return the publishable (non-sensitive) result to the researchers (Figure 1). We refer to this approach as *"opening the data while releasing none of it."*        
+
+
+![Figure 1. How Kinetic Changes the Status Quo Research Approach](images/Kinetic_enclave_support_doc.png){width=80%}
+<br/> 
+
+**Student privacy and data protection are at the forefront of all work in Kinetic.** We know the safest place for student data to live is exclusively within the infrastructure in which it was gathered, i.e., all the OpenStax products students use every day. Our approach honors this fact by running all research analysis and controlling all research interventions within secure enclaves inside OpenStax compute infrastructure. 
+
+From the researcher’s perspective, delivering their software in a container gives them flexibility to choose the analysis software they prefer with the comfort of knowing that that software will run inside an enclave exactly as it runs on the researcher’s laptop. For Kinetic Alpha, we will be starting with the R Statistical software on the RStudio environment.
+
+The secure enclaves approach is uniquely strong in solving the essential dilemma — how to conduct generalizable educational and learning research while protecting student privacy. To understand how and why secure enclaves solve this dilemma, a brief discussion of the similarities and differences of educational services and educational research is necessary:
+The enclave container—not the scientist—is able to access learner information within OpenStax. The analysis code in the enclave container is checked to ensure it can only return aggregate data about the relationships among variables and NOT identifiable data. This contrasts with the situation today, where the only way a scientist can run their query and analysis is to first import the learner information-laden data to their own data storage. Unfortunately, once the data has moved from OpenStax to the researcher’s data storage, protecting identifiable learner information becomes exponentially harder. 
+
+There are relatively few and minor regulations or legal concerns about sharing statistical models of relationships among variables, and this is the essence of scientific knowledge in the learning and educational sciences. Hence, a transformation is accomplished: statistical analyses can see all the data necessary to answer scientific questions, but scientists can see, store, and share only the statistical models of generalized relationships among variables.
+
+## Step-by-step introduction to analysis on Kinetic Enclaves
+
+- You start your Kinetic enclaves from your researcher dashboard when you select `Analyze data → Open RStudio`. Your enclave will look similar to your local RStudio window that you are familiar with and will come with the simulated versions of the datasets that you selected to work with. 
+
+- When you open your Kinetic enclave, you will have access to this tutorial and a READMe that will walk you through the preprocessing, FAQs, and other essentials, as well as a series of helper functions to get you started.
+
+- You can create .R analysis files and start coding away! Kinetic will save your work and ensure that you can return to it at a later time. 
+When you feel like your analysis is ready to be run against the real data, you can submit your analysis from your enclave directly by clicking the **submit analysis** button on the enclave.
+
+- When you click the submit analysis button, you will be asked to add a brief (70 characters) meaningful message about your analysis run that will help you retrieve the analysis and results in the future. If you know about GitHub and version control, this message is akin to a commit message and will help you with building a version history. 
+
+- When you hit submit, members of the Kinetic team will review your code to ensure that no personal information is accidentally being leaked as a result of code and that there are no errors in the code before returning the aggregated results back to you. The review process should take no more than 3 days if the analysis is submitted over the weekend, but will likely be much faster during business hours (a few hours).
+
+- You will receive an email notification from XX@XX.XXX with the subject line:[XX] when your analysis results are ready for you as well as seeing an update on your dashboard. You can select the analysis and retrieve the specific results for it. 
+
+- The analysis results will initially be in a simple `.csv` format for numeric information and `.png` for data visualizations. Eventually, we will enable more sophisticated formats for result reporting including RMarkdown that include a combination of code, text, visualizations, and results.
+
+## Organization of Kinetic Enclave Workspaces
+
+The following folders will exist in your enclave space to help you organize your analysis:
+
+### data
+
+When you choose specific measure(s) for your analysis from the Kinetic Learner Characteristics Library (KLCL), you will have access to certain resources related to these measures when you initiate analysis in the data folder. This folder will include synthetic datasets, the Qualtrics survey metadata, and the exploratory and aggregate statistics from all the datasets you select on your analysis.
+
+For example, if you select the `demographics` measure, you will have access to:
+
+- `demographics_simulated_07192023.csv`, 
+
+- `demographics_summary_stats.html`, and 
+
+- `demographics_survey_metadata.csv`. 
+
+In the following sections, we will explain what to expect in each of these datasets.
+
+#### Synthetic Datasets
+
+Upon selection of the datasets that researchers want to use for their analyses, they trigger an enclave container that opens up with RStudio and simulated versions of the selected datasets. The researchers build their analysis code based on these simulated datasets to ensure that the script runs without errors.
+
+We use the opensource SynthCity toolkit [@qian2023synthcity] to retain the same datastructure, data types, and generate simulated data. The simulated data will vary in its approximation of the real data features based on how many cases are available for the algorithms in the SynthCity toolkit to train on. At the very basic level, when there are `300` or less respondents in the raw data, Kinetic synthetic datasets are generated by randomly sampling response options for every individual question included in the dataset aligned with the data schema. As we acquire more responses, we utilize the models outlined in the toolkit to generate higher fidelity synthetic datasets more closely approximating the statistical features of the raw data.
+
+Simulated data files will have the suffix `simulated` at the end of the task name and will be available in the `output` folder.
+
+```{r simdata , eval=FALSE}
+demographic_data <- read_csv(demographic-survey-stage-120230616-5-bzb0fq-a2b06d2cadad7a80a33d1dcabb887ccd.csv)
+
+glimpse(demographic_data)
+```
+
+
+#### Qualtrics Survey Metadata
+
+This dataset will give you the details of all the questions included in the Qualtrics activity including question stem, response options, and information on other columns recorded in Qualtrics.
+
+```{r survey_metadata, eval=FALSE, exercise=FALSE}
+demographic_data <- read_csv(demographic-survey-stage-120230616-5-bzb0fq-a2b06d2cadad7a80a33d1dcabb887ccd.csv)
+
+glimpse(demographic_data)
+
+```
+
+#### Real data summary and exploratory visualizations
+
+This is an html file that includes information on the raw data including exploratory visualizations, summary statistics, and data schema. The contents in these summary files will be periodically updates as new data comes in.
+
+```{r summary_metadata, exercise=TRUE}
+rstudio_viewer(file_name = "SV_5cYoUw84RixQC8K.html", file_path =  "~/Documents/GitHub/research-kinetic-pipeline/R/summary_stats/")
+```
+
+### output
+
+You can use this folder to save any interim datasets, or analysis results for later review.
+<!--When you submit your analysis, and the results are processed and returned, these results will be saved in the output folder.-->
+
+###  
+
+
+
+## Demo
+
+![](%22https://www.youtube.com/embed/bs5U1M6tgBg%22)
+
+## Helper functions
+
