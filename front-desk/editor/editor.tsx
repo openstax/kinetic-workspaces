@@ -9,7 +9,7 @@ import { Pending, ErrorMessage } from '@nathanstitt/sundry/ui'
 import type { EditorState } from '../definitions.js'
 import { isRPCError, updateWorkspaceStatus } from '../server/rpc.js'
 import { RStudioIframe } from './iframe.js'
-
+import { whenDomReady } from '../lib/util'
 
 export function Editor() {
     const analysisId = Number((location?.hash?.match(/(\d+)$/) || [0])[0])
@@ -41,13 +41,5 @@ export function Editor() {
     )
 }
 
-
-const whenDomReady = (fn: () => void) => {
-    if (document.readyState === "complete" || document.readyState === "interactive") {
-        setTimeout(fn, 1)
-    } else {
-        document.addEventListener("DOMContentLoaded", fn)
-    }
-}
 
 whenDomReady(() => createRoot(document.getElementById('root')!).render(<Editor />))

@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { CommitMessagPrompt } from './message'
-
+import { ENV } from './env'
+export const REQUEST_KINETIC_DETAILS = 'request-kinetic-details'
 
 type TargetedMessageEventData = {
     target?: string
@@ -12,16 +13,25 @@ type TargetedMessageEventData = {
 class Handler {
     iframe: HTMLIFrameElement
     iframeSource: string
+    analysisId: number
 
     submitRunHandler?: () => void
 
-    constructor(iframe: HTMLIFrameElement, source: string) {
+    constructor(iframe: HTMLIFrameElement, source: string, analysisId: number) {
         this.iframe = iframe
         this.iframeSource = source
+        this.analysisId = analysisId
         window.addEventListener('message', this.onMessage, false);
     }
 
     onMessage = (ev: MessageEvent) => {
+
+        if (ev.data === REQUEST_KINETIC_DETAILS) {
+            ev.source?.postMessage(JSON.stringify({
+                analysisId: this.analysisId,
+                url: `${ENV.KINETIC_URL}/api/v1/researcher/responses/${this.analysisId}/info`,
+            }))
+        }
         if (ev.source !== this.iframe.contentWindow) return
         try {
             const { data } = ev as MessageEvent<TargetedMessageEventData>
@@ -74,7 +84,7 @@ export const RStudioIframe:React.FC<{ url: string, analysisId: number }> = ({ ur
         if (el === handler?.iframe) return
         if (handler) handler.disconnect()
         if (el) {
-            setHandlerInstance(new Handler(el, url))
+            setHandlerInstance(new Handler(el, url, analysisId))
         }
     }, [handler, setHandlerInstance])
 

@@ -1,0 +1,19 @@
+{
+  "name": "survey-sweeper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "esbuild index.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/index.js"
+  },
+  "author": "Nathan Stitt",
+  "license": "AGPL-3.0-or-later",
+  "dependencies": {
+    "aws-lambda": "^1.0.7",
+    "esbuild": "^0.18.13"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.119"
+  }
+}

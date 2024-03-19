@@ -28,6 +28,8 @@ const scheduledHandler: ScheduledHandler = async () => {
 const apiHandler: APIGatewayProxyHandler = async (event: any) => {
     const config = await getConfig()
 
+    console.log(event.headers)
+
     const cookies = cookie.parse(event.headers.cookie || '')
 
     const params = JSON.parse(event.body || '{}') as StatusParams

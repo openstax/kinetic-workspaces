@@ -76,8 +76,10 @@ apt_install \
 ln -s /usr/lib/R/site-library/littler/examples/install2.r /usr/local/bin/install2.r
 
 install2.r --error --skipinstalled -n "$NCPUS" \
+    remotes\
     janitor \
     tidyverse \
+    rstudioapi \
     devtools \
     rmarkdown \
     BiocManager \
@@ -87,23 +89,18 @@ install2.r --error --skipinstalled -n "$NCPUS" \
     rvest \
     qualtRics \
     kableExtra \
-    shiny \
     leaflet \
     plotly \
     psych \
     careless \
     RSQLite \
     renv \
+    shiny \
     devtools
 
-# dbplyr \
-#     DBI \
-#     dtplyr \
-#     devtools \
-#     nycflights13 \
-#     Lahman \
-#     RSQLite \
-#     fst
+
+
+R -e 'remotes::install_github("ricompute/ricomisc", upgrade="always")'
 
 ## a bridge to far? -- brings in another 60 packages
 # install2.r --error --skipinstalled -n "$NCPUS" tidymodels
@@ -116,9 +113,24 @@ echo -e "\nInstall tidyverse package, done!"
 ## file should have been placed there by aws_imagebuilder_component.kinetic_workspaces_config_files
 R -e 'install.packages("/tmp/kinetic-r-api.tar.gz", repos = NULL, type = "source")'
 
+
+# install learnr after everything else
+install2.r learnr
+
+cd /usr/local/lib/R/site-library/learnr/tutorials
+for entry in *; do
+  if [ "$entry" != "ex-data-filter" ]; then
+    rm -r "$entry"
+  fi
+done
+
+
+# cp -r /usr/local/lib/R/site-library/kinetic/tutorials/* /usr/local/lib/R/site-library/learnr/tutorials/
+
 # Clean up
 ## Strip binary installed lybraries from RSPM
 ## https://github.com/rocker-org/rocker-versioned2/issues/340
 strip /usr/local/lib/R/site-library/*/libs/*.so
 
-echo -e "\nInstall kinetic package, done!"
+
+echo -e "\nInstalled all package, done!"

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#set -euo pipefail
+
+# Initialization - load function handler
+#source $LAMBDA_TASK_ROOT/"$(echo $_HANDLER | cut -d. -f1).sh"
+
+
+# Processing
+while true
+do
+  HEADERS="$(mktemp)"
+  # Get an event. The HTTP request will block until one is received
+  EVENT_DATA=$(curl -sS -LD "$HEADERS" -X GET "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next")
+
+  # Extract request ID by scraping response headers received above
+  REQUEST_ID=$(grep -Fi Lambda-Runtime-Aws-Request-Id "$HEADERS" | tr -d '[:space:]' | cut -d: -f2)
+
+  ls
+  echo $_HANDLER
+
+  BIN='node_modules/.bin'
+
+  echo $BIN
+  echo `ls $BIN`
+  echo `ls $BIN/aws-lambda-ric`
+
+  exec $BIN/aws-lambda-ric
+
+  RESPONSE=`$BIN/aws-lambda-ric`
+  echo $RESPONSE
+
+  # Send the response
+  curl -X POST "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/$REQUEST_ID/response"  -d "$RESPONSE"
+done

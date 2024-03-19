@@ -13,7 +13,6 @@ fi
 
 if [[ $sourced != 1 ]]; then
    printf "\033[0;31mYOU SHOULD HAVE SOURCED THIS SCRIPT!\033[0m\n\n"
-   exit 1
 fi
 
 ENV=$1
@@ -26,7 +25,7 @@ case $ENV in
     domain=dev.kinetic.openstax.org
     ;;
   staging)
-    app=kinetic-web
+    app=kinetic-web-staging
     cookie_name=oxa_staging
     domain=kinetic.sandbox.openstax.org
     kinetic_url=https://staging.kinetic.openstax.org/
@@ -38,7 +37,6 @@ case $ENV in
   ;;
   *)
     echo "Usage: $0 <dev|staging|production>" 1>&2;
-    exit 1
     ;;
 esac
 

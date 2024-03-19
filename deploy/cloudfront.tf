@@ -111,6 +111,10 @@ resource "aws_s3_object" "kinetic_ws_rstudio_patches" {
 }
 
 
+data "aws_lambda_function" "sso_cookie_decoder" {
+  function_name = "sso-cookie-decoder"
+}
+
 // Cloudfront Distribution
 resource "aws_cloudfront_distribution" "kinetic_workspaces" {
   default_root_object = "index.html"
@@ -177,7 +181,6 @@ resource "aws_cloudfront_distribution" "kinetic_workspaces" {
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = aws_lambda_function_url.kinetic_ws_front_desk.id
 
-
     compress               = true
     default_ttl            = 0
     max_ttl                = 0
@@ -196,6 +199,8 @@ resource "aws_cloudfront_distribution" "kinetic_workspaces" {
         whitelisted_names = []
       }
     }
+
+
   }
 
   ordered_cache_behavior {

@@ -28,28 +28,33 @@ async function provisionProfile(worker: WorkerModel, analysis: Analysis) {
     })
 
     const userName = worker.userName
-
     const hostName = worker.hostName.split('.')[0]
+    const keyLine=`ANALYSIS_API_KEY=${analysis.api_key}`
+    const environFile = '/home/editor/.Renviron'
 
     const cmd = `
         echo 127.0.7.1 ${hostName} ${worker.hostName} | sudo tee -a /etc/hosts && \\
         echo ${hostName} | sudo tee -a /etc/hostname && sudo hostname ${hostName} && \\
         sudo addgroup --gid ${PosixUserId} ${userName} && \\
         sudo adduser --disabled-password --home /home/editor --uid ${PosixUserId} --gid ${PosixUserId} --shell /bin/false --gecos 'Kinetic Workspace User' ${userName} && \\
-        sudo ${MOUNT}${worker.accessPointId} ${config.efsAddress}:/ /home/editor
+        sudo ${MOUNT}${worker.accessPointId} ${config.efsAddress}:/ /home/editor && \\
+        sudo -u ${userName} bash -c 'grep -q "^ANALYSIS_API_KEY" ${environFile} && sed -i "/^ANALYSIS_API_KEY/c\\${keyLine}" ${environFile} || echo "${keyLine}" >> ${environFile}'
     `
-    const resp = await ssh.execCommand(cmd)
+    let resp = await ssh.execCommand(cmd)
     if (resp.code != 0) {
         console.warn(`exit status: ${resp.code}`, cmd, resp.stdout, resp.stderr)
         throw new Error(resp.stderr)
     }
-    const fresh = await ssh.execCommand('[ ! -d /home/editor/kinetic ]')
-    if (fresh.code == 0) {
+
+    resp = await ssh.execCommand('[ ! -d /home/editor/kinetic ]')
+    if (resp.code == 0) {
         const profileUrl = await getProfileUrl()
         console.log({ profileUrl })
         const resp = await ssh.execCommand(`
             wget -qO- "${profileUrl}" | sudo -u ${userName} tar xz -C /home/editor && \\
-            echo "ANALYSIS_API_KEY=${analysis.api_key}" >> /home/editor/.Renviron
+            sudo -u ${userName} perl -MTime::Piece -pi -e 's/(cutoff_date\s*=\s*")\d{4}-\d{2}-\d{2}(")/$1 . Time::Piece->new->ymd . $2/ge' /home/editor/kinetic/main.r && \\
+            rm -f /home/editor/kinetic/data/* && \\
+            sudo -u ${userName} -D /home/editor/kinetic R -f /home/editor/kinetic/main.r'
         `)
         if (resp.code != 0) {
             throw new Error(resp.stderr)

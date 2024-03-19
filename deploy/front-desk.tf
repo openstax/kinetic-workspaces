@@ -29,7 +29,7 @@ resource "aws_s3_object" "kinetic_ws_fd_index" {
   bucket       = aws_s3_bucket.kinetic_ws_assets.id
   key          = "editor/index.html"
   content_type = "text/html; charset=utf-8"
-  source       = "${path.module}/../front-desk/dist/index.html"
+  source       = "${path.module}/../front-desk/dist/editor/index.html"
   source_hash  = local.front_desk_sha
 }
 
