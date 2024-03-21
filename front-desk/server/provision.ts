@@ -48,7 +48,7 @@ async function provisionProfile(worker: WorkerModel, analysis: Analysis) {
         throw new Error(resp.stderr)
     }
 
-    resp = await ssh.execCommand('[ ! -d /home/editor/kinetic ]')
+    resp = await ssh.execCommand('[ ! -e /home/editor/kinetic/main.r ]')
     if (resp.code == 0) {
         const profileUrl = await getProfileUrl()
         console.log({ profileUrl })
