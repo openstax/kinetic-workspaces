@@ -17,3 +17,4 @@ front-desk/*.txt
 enclave/source/
 synthetic-data/*.csv
 synthetic-data/qualtrics_cred.txt
+synthetic-data/workspace/

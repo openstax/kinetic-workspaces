@@ -29,16 +29,21 @@ loader = GenericDataLoader(
 )
 
 #
-plugins = [ "marginal_distributions" ] #, "marginal_distributions", "adsgan", "ddpm", "dpgan"]
+# plugins = [ "marginal_distributions" , "adsgan", "ddpm", "dpgan"]
+# removed "great", which is LLM based and far to slow
+# 'privbayes'
+plugins = ['tvae', 'ddpm', 'adsgan', 'dpgan', 'ctgan', 'uniform_sampler',  'arf', 'nflow', 'dummy_sampler', 'decaf', 'marginal_distributions',  'bayesian_network', 'rtvae', 'pategan']
 
 for name in plugins:
-  syn_model = Plugins().get(name)
-  print(type(syn_model))
-  syn_model.fit(input_data)
-  syn_model.generate(count=100).dataframe().to_csv(
-    file_root + '_' + date.today().strftime("%Y-%m-%d")+'_'+syn_model.name()+'.csv', index=False
-  )
-
+    try:
+        syn_model = Plugins().get(name)
+        print("------------" + name + "-----------")
+        syn_model.fit(input_data)
+        syn_model.generate(count=1000).dataframe().to_csv(
+            file_root + '_' + date.today().strftime("%Y-%m-%d")+'_'+syn_model.name()+'.csv', index=False
+        )
+    except Exception as e:
+        print(f"An error occurred with plugin {name}: {e}")
 
 # score = Benchmarks.evaluate(
 #     [
