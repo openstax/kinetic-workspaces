@@ -24,7 +24,7 @@ input_data = csv.iloc[1:]  # Remove the garbage json row
 loader = GenericDataLoader(
     data=input_data,
     target_column="research_id",
-    sensitive_features=["LocationLatitude","LocationLongitude", "IP Address"]
+    sensitive_features=["LocationLatitude", "LocationLongitude", "IP Address"]
     # sensitive_columns=["sex"],
 )
 

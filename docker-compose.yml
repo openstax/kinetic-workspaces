@@ -1,0 +1,12 @@
+services:
+    rstudio:
+        platform: linux/arm64
+        build:
+            context: ./rstudio
+            dockerfile: Dockerfile
+        ports:
+            - 8787:8787
+        environment:
+            - USER=rstudio
+            - PASSWORD=test
+            - DISABLE_AUTH=true
