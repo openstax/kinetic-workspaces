@@ -23,6 +23,9 @@ FROM rocker/rstudio:latest
 #    renv \
 #    shiny
 
+# This works, the install2.r doesn't for some reason
+RUN R -e "install.packages('tidyverse',dependencies=TRUE, repos='http://cran.rstudio.com/')"
+
 # TODO Get kinetic api in here
 #RUN R -e "install.packages('/tmp/kinetic-r-api.tar.gz', repos = NULL, type = 'source')"
 
