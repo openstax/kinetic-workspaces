@@ -43,6 +43,7 @@ Provisioning instances is a multi-step process.
 When users are testing their code inside RStudio and call the `fetch_kinetic_responses` api method, the R library requests responses from the kinetic `/api/v1/researcher/analysis/<id>` endpoint using the API key that the analysis was provisioned with by storing it in the `~/.Renviron` file.   The endpoint also accepts an enclave api key that is only used inside the enclave and not from RStudio.  If that key is present, real responses are returned, otherwise sythetic data is provided.
 
 * Synthetic data is pre-generated using scripts in the `synthetic-data` directory of this repo.  The [run](synthetic-data/run) script accepts a single command line argument which is a path to a real dataset.
+  * Some studies have a cleaning script that downloads and cleans the data.  See [synthetic-data/science-knowledge.r](synthetic-data/science-knowledge.r) as an example.  It can be ran as `R -f science-knowledge.r`
 * It boots up a docker environment and runs `generate.py` inside it.
 * generate.py is a work in progress, some of the [plugins](synthetic-data/generate.py#L35) work only with various sets and may need to be modified in order to successfully generate for each set.
 * Once a dataset is generated, it can be uploaded in the kinetic "Manage Workspaces" admin UI for each study.
