@@ -38,6 +38,17 @@ Provisioning instances is a multi-step process.
 
 - The [iframe src](front-desk/editor.tsx#60) is then is set to the new sub-domain and RStudio authenticates using the cookie.
 
+## Synthetic Data
+
+When users are testing their code inside RStudio and call the `fetch_kinetic_responses` api method, the R library requests responses from the kinetic `/api/v1/researcher/analysis/<id>` endpoint using the API key that the analysis was provisioned with by storing it in the `~/.Renviron` file.   The endpoint also accepts an enclave api key that is only used inside the enclave and not from RStudio.  If that key is present, real responses are returned, otherwise sythetic data is provided.
+
+* Synthetic data is pre-generated using scripts in the `synthetic-data` directory of this repo.  The [run](synthetic-data/run) script accepts a single command line argument which is a path to a real dataset.
+* It boots up a docker environment and runs `generate.py` inside it.
+* generate.py is a work in progress, some of the [plugins](synthetic-data/generate.py#L35) work only with various sets and may need to be modified in order to successfully generate for each set.
+* Once a dataset is generated, it can be uploaded in the kinetic "Manage Workspaces" admin UI for each study.
+
+RStudio will then download these response files when `fetch_kinetic_responses` is called.  If a study does not have a pre-generated dataset, then Kinetic will [generate random data](https://github.com/openstax/kinetic/blob/main/backend/app/services/qualtrics_test_data.rb) and return that.  Random data is non-optimal; the distributions will be random and not match the real study.
+
 ### RStudio modifications
 
 - We set the RStudio secret to a known value which allows our code to generate a cookie and stop RStudio from showing it's login.
