@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#    --platform linux/amd64 \
 
 docker run -it --rm \
     --mount type=bind,source=$PWD,target=/app \
+    --platform linux/amd64 \
     syncity-test \
     python3 generate.py $1
