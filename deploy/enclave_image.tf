@@ -31,6 +31,7 @@ resource "aws_imagebuilder_image_recipe" "kinetic_enclave" {
   version      = "1.0.0"
 }
 
+# terraform apply -replace=aws_imagebuilder_image.kinetic_enclave
 resource "aws_imagebuilder_image" "kinetic_enclave" {
   image_recipe_arn                 = aws_imagebuilder_image_recipe.kinetic_enclave.arn
   infrastructure_configuration_arn = aws_imagebuilder_infrastructure_configuration.kinetic_workspaces.arn

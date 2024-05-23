@@ -87,7 +87,7 @@ async function runDockerImage() {
     await docker.run(dockerImage, ['R', '-f', 'main.r'], ws, {
         HostConfig: {
             Binds: [
-                `${process.cwd()}/output:/home/editor/kinetic/output`,
+                `${outputDir}:/home/editor/kinetic/output`,
             ]
         }
     })

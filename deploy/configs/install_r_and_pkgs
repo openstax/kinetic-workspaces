@@ -7,8 +7,6 @@
 
 set -ex
 
-BUCKET=$1
-
 NCPUS=`nproc --all`
 
 echo building using $NCPUS cpu count.

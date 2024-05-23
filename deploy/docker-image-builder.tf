@@ -54,6 +54,7 @@ resource "aws_imagebuilder_image_pipeline" "kinetic_workspaces_enclave" {
   infrastructure_configuration_arn = aws_imagebuilder_infrastructure_configuration.kinetic_workspaces.arn
 }
 
+# to force rebuild: terraform apply -replace=aws_imagebuilder_image.kinetic_workspaces_enclave
 resource "aws_imagebuilder_image" "kinetic_workspaces_enclave" {
   container_recipe_arn             = aws_imagebuilder_container_recipe.kinetic_workspaces_enclave.arn
   infrastructure_configuration_arn = aws_imagebuilder_infrastructure_configuration.kinetic_workspaces.arn

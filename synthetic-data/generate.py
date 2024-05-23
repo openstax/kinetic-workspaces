@@ -32,7 +32,8 @@ loader = GenericDataLoader(
 # plugins = [ "marginal_distributions" , "adsgan", "ddpm", "dpgan"]
 # removed "great", which is LLM based and far to slow
 # 'privbayes'
-plugins = ['tvae', 'ddpm', 'adsgan', 'dpgan', 'ctgan', 'uniform_sampler',  'arf', 'nflow', 'dummy_sampler', 'decaf', 'marginal_distributions',  'bayesian_network', 'rtvae', 'pategan']
+plugins = ['marginal_distributions']
+#plugins = ['tvae', 'ddpm', 'adsgan', 'dpgan', 'ctgan', 'uniform_sampler',  'arf', 'nflow', 'dummy_sampler', 'decaf', 'marginal_distributions',  'bayesian_network', 'rtvae', 'pategan']
 
 for name in plugins:
     try:

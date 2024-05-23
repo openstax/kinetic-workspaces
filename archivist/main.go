@@ -48,7 +48,7 @@ func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 
 	srcDirectory := fmt.Sprintf("/mnt/efs/editor/%d", evt.AnalysisID)
 
-	fmt.Printf("hello world, reading %s writing to %s\n", srcDirectory, *evt.BucketPath())
+	fmt.Printf("reading %s writing to %s\n", srcDirectory, *evt.BucketPath())
 
 	reader, writer := io.Pipe()
 
@@ -66,6 +66,7 @@ func HandleRequest(ctx context.Context, evt Event) (*Output, error) {
 		ext := strings.ToLower(filepath.Ext(files[i].NameInArchive))
 		if ext != ".git" && ext != ".log" {
 			files[n] = files[i]
+            fmt.Printf("adding %s\n", files[i].NameInArchive)
 			n += 1
 		}
 	}
